@@ -4,6 +4,10 @@
 /wp-*.php
 /xmlrpc.php
 /index.php
+/license.txt
+/readme.html
+/.htaccess
+/wp-content/index.php
 wp-config.php
 wp-content/uploads/
 wp-content/cache/
