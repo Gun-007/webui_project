@@ -17,6 +17,7 @@ require_once ENC_DIR . 'includes/post-types.php';
 require_once ENC_DIR . 'includes/database.php';
 require_once ENC_DIR . 'includes/registrations.php';
 require_once ENC_DIR . 'includes/proposals.php';
+require_once ENC_DIR . 'includes/auth.php';
 
 register_activation_hook( __FILE__, 'enc_activate' );
 
