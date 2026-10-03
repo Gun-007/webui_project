@@ -3,28 +3,28 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /* ---------- Post type + taxonomies ---------- */
 function en_register_content() {
-	register_post_type( 'event', array(
+	if ( ! post_type_exists( 'event' ) ) register_post_type( 'event', array(
 		'labels' => array(
 			'name' => __( 'Events', 'eventnest' ), 'singular_name' => __( 'Event', 'eventnest' ),
 			'add_new_item' => __( 'Add new event', 'eventnest' ), 'edit_item' => __( 'Edit event', 'eventnest' ),
 			'all_items' => __( 'All events', 'eventnest' ), 'menu_name' => __( 'Events', 'eventnest' ),
 		),
-		'public' => true, 'has_archive' => 'events', 'rewrite' => array( 'slug' => 'event' ),
+		'public' => true, 'has_archive' => 'events', 'rewrite' => array( 'slug' => 'events' ),
 		'menu_icon' => 'dashicons-tickets-alt', 'menu_position' => 5, 'show_in_rest' => true,
 		'supports' => array( 'title', 'editor', 'thumbnail', 'excerpt', 'author' ),
 	) );
-	register_taxonomy( 'event_category', 'event', array(
+	if ( ! taxonomy_exists( 'event_category' ) ) register_taxonomy( 'event_category', 'event', array(
 		'labels' => array( 'name' => __( 'Categories', 'eventnest' ), 'singular_name' => __( 'Category', 'eventnest' ) ),
 		'hierarchical' => true, 'show_in_rest' => true, 'show_admin_column' => true, 'query_var' => true,
 		'rewrite' => array( 'slug' => 'event-category' ),
 	) );
-	register_taxonomy( 'event_city', 'event', array(
+	if ( ! taxonomy_exists( 'event_city' ) ) register_taxonomy( 'event_city', 'event', array(
 		'labels' => array( 'name' => __( 'Cities', 'eventnest' ), 'singular_name' => __( 'City', 'eventnest' ) ),
 		'hierarchical' => true, 'show_in_rest' => true, 'show_admin_column' => true, 'query_var' => true,
 		'rewrite' => array( 'slug' => 'event-city' ),
 	) );
 }
-add_action( 'init', 'en_register_content' );
+add_action( 'init', 'en_register_content', 20 );
 
 add_action( 'after_switch_theme', function () {
 	en_register_content();
@@ -33,6 +33,14 @@ add_action( 'after_switch_theme', function () {
 
 /* ---------- Event details meta box ---------- */
 function en_meta_fields() {
+	if ( function_exists( 'enc_event_fields' ) ) {
+		return array(
+			'address'    => array( 'Room / building details (optional)', 'text' ),
+			'rules'      => array( 'Rules & guidelines', 'textarea' ),
+			'highlights' => array( 'Highlights (one per line)', 'textarea' ),
+			'ticket_url' => array( 'External registration link (optional)', 'url' ),
+		);
+	}
 	return array(
 		'date'       => array( 'Date', 'date' ),
 		'time'       => array( 'Start time', 'time' ),
@@ -49,8 +57,29 @@ function en_meta_fields() {
 	);
 }
 
+function en_meta_key( $key ) {
+	if ( function_exists( 'enc_event_fields' ) ) {
+		$plugin_keys = array(
+			'date'                 => '_en_date',
+			'time'                 => '_en_start',
+			'end_time'             => '_en_end',
+			'venue'                => '_en_venue',
+			'registration_deadline' => '_en_deadline',
+			'max_participants'     => '_en_max',
+			'price'                => '_en_fee',
+		);
+		if ( isset( $plugin_keys[ $key ] ) ) return $plugin_keys[ $key ];
+	}
+	return '_en_' . $key;
+}
+
 function en_meta( $id, $key ) {
-	return get_post_meta( $id, '_en_' . $key, true );
+	if ( 'organizer' === $key && function_exists( 'enc_event_fields' ) ) {
+		$club_id = absint( get_post_meta( $id, '_en_club', true ) );
+		$club    = $club_id ? get_the_title( $club_id ) : '';
+		return $club ?: get_post_meta( $id, '_en_incharge', true );
+	}
+	return get_post_meta( $id, en_meta_key( $key ), true );
 }
 
 add_action( 'add_meta_boxes', function () {
@@ -87,7 +116,7 @@ add_action( 'save_post_event', function ( $post_id ) {
 		} else {
 			$val = sanitize_text_field( $raw );
 		}
-		update_post_meta( $post_id, '_en_' . $key, $val );
+		update_post_meta( $post_id, en_meta_key( $key ), $val );
 	}
 } );
 
@@ -193,8 +222,8 @@ add_action( 'pre_get_posts', function ( $q ) {
 	}
 	if ( isset( $_GET['free'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['free'] ) ) ) {
 		$mq[] = array( 'relation' => 'OR',
-			array( 'key' => '_en_price', 'compare' => 'NOT EXISTS' ),
-			array( 'key' => '_en_price', 'value' => array( '', '0' ), 'compare' => 'IN' ) );
+			array( 'key' => en_meta_key( 'price' ), 'compare' => 'NOT EXISTS' ),
+			array( 'key' => en_meta_key( 'price' ), 'value' => array( '', '0' ), 'compare' => 'IN' ) );
 	}
 	$q->set( 'post_type', 'event' );
 	$q->set( 'posts_per_page', 12 );

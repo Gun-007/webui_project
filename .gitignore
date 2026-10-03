@@ -1,14 +1,32 @@
-# Local WordPress installation: track only EventNest source files.
-*
-!.gitignore
-!README.md
-!wp-content/
-wp-content/*
-!wp-content/themes/
-wp-content/themes/*
-!wp-content/themes/eventnest/
-wp-content/themes/eventnest/**
-!wp-content/plugins/
+# WordPress core and runtime: never commit
+/wp-admin/
+/wp-includes/
+/wp-*.php
+/xmlrpc.php
+/index.php
+/license.txt
+/readme.html
+/.htaccess
+/wp-content/index.php
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
 wp-content/plugins/*
 !wp-content/plugins/eventnest-core/
-wp-content/plugins/eventnest-core/**
+wp-content/themes/*
+!wp-content/themes/eventnest/
+
+# Secrets and dumps
+.env
+*.sql
+*.sql.gz
+*.zip
+
+# Dev junk
+node_modules/
+vendor/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

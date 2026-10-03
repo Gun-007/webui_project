@@ -20,13 +20,13 @@ $closing_query = new WP_Query( array(
 	'post_type'      => 'event',
 	'post_status'    => 'publish',
 	'posts_per_page' => 3,
-	'meta_key'       => '_en_registration_deadline',
+	'meta_key'       => en_meta_key( 'registration_deadline' ),
 	'orderby'        => 'meta_value',
 	'order'          => 'ASC',
 	'meta_query'     => array(
 		'relation' => 'AND',
 		array(
-			'key'     => '_en_registration_deadline',
+			'key'     => en_meta_key( 'registration_deadline' ),
 			'value'   => array( current_time( 'Y-m-d' ), date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS ) ),
 			'compare' => 'BETWEEN',
 			'type'    => 'DATE',
