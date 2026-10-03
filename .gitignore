@@ -1,0 +1,28 @@
+# WordPress core and runtime: never commit
+/wp-admin/
+/wp-includes/
+/wp-*.php
+/xmlrpc.php
+/index.php
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/plugins/*
+!wp-content/plugins/eventnest-core/
+wp-content/themes/*
+!wp-content/themes/eventnest/
+
+# Secrets and dumps
+.env
+*.sql
+*.sql.gz
+*.zip
+
+# Dev junk
+node_modules/
+vendor/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
