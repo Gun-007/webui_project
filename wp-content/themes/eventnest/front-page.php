@@ -1,107 +1,129 @@
 <?php
 get_header();
 
-$q = en_upcoming( 6 );
-$cards = array();
-if ( $q->have_posts() ) {
-	while ( $q->have_posts() ) { $q->the_post(); $cards[] = en_card_data( get_the_ID() ); }
+$events_query = en_upcoming( 8 );
+$events       = array();
+if ( $events_query->have_posts() ) {
+	while ( $events_query->have_posts() ) {
+		$events_query->the_post();
+		$events[] = en_card_data( get_the_ID() );
+	}
 	wp_reset_postdata();
 }
-$is_sample = empty( $cards );
-if ( $is_sample ) $cards = en_sample_events();
-$hero    = $cards[0];
-$archive = get_post_type_archive_link( 'event' );
-$cities  = get_terms( array( 'taxonomy' => 'event_city', 'hide_empty' => false, 'number' => 30 ) );
-$cats    = get_terms( array( 'taxonomy' => 'event_category', 'hide_empty' => false, 'number' => 30 ) );
-$cities  = is_wp_error( $cities ) ? array() : $cities;
-$cats    = is_wp_error( $cats ) ? array() : $cats;
+
+$has_events = ! empty( $events );
+if ( ! $has_events ) {
+	$events = en_sample_events();
+}
+
+$closing_query = new WP_Query( array(
+	'post_type'      => 'event',
+	'post_status'    => 'publish',
+	'posts_per_page' => 3,
+	'meta_key'       => '_en_registration_deadline',
+	'orderby'        => 'meta_value',
+	'order'          => 'ASC',
+	'meta_query'     => array(
+		'relation' => 'AND',
+		array(
+			'key'     => '_en_registration_deadline',
+			'value'   => array( current_time( 'Y-m-d' ), date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS ) ),
+			'compare' => 'BETWEEN',
+			'type'    => 'DATE',
+		),
+		array(
+			'key'     => '_en_date',
+			'value'   => current_time( 'Y-m-d' ),
+			'compare' => '>=',
+			'type'    => 'DATE',
+		),
+	),
+) );
+$closing = array();
+if ( $closing_query->have_posts() ) {
+	while ( $closing_query->have_posts() ) {
+		$closing_query->the_post();
+		$closing[] = en_card_data( get_the_ID() );
+	}
+	wp_reset_postdata();
+}
+if ( ! $has_events ) {
+	$closing = array_slice( $events, 0, 3 );
+}
+
+$hero_image = get_theme_mod( 'en_hero_image' );
+$archive    = get_post_type_archive_link( 'event' );
 ?>
 
-<section class="hero">
-	<div class="wrap hero__grid">
-		<div class="hero__copy">
-			<h1 class="hero__title"><?php echo esc_html( en_opt( 'hero_title' ) ); ?></h1>
-			<p class="hero__sub"><?php echo esc_html( en_opt( 'hero_sub' ) ); ?></p>
-
-			<form class="search" role="search" method="get" action="<?php echo esc_url( home_url( '/' ) ); ?>">
-				<input type="hidden" name="post_type" value="event">
-				<label class="search__field search__field--grow">
-					<span><?php esc_html_e( 'What', 'eventnest' ); ?></span>
-					<input type="search" name="s" placeholder="<?php esc_attr_e( 'Music, workshop, fest…', 'eventnest' ); ?>">
-				</label>
-				<?php if ( $cities ) : ?>
-				<label class="search__field">
-					<span><?php esc_html_e( 'Where', 'eventnest' ); ?></span>
-					<select name="event_city">
-						<option value=""><?php esc_html_e( 'All cities', 'eventnest' ); ?></option>
-						<?php foreach ( $cities as $c ) echo '<option value="' . esc_attr( $c->slug ) . '">' . esc_html( $c->name ) . '</option>'; ?>
-					</select>
-				</label>
-				<?php endif; ?>
-				<button class="btn btn--brand search__go" type="submit"><?php esc_html_e( 'Find events', 'eventnest' ); ?></button>
-			</form>
-		</div>
-
-		<div class="hero__art" aria-hidden="<?php echo $is_sample ? 'true' : 'false'; ?>">
-			<span class="hero__sun"></span>
-			<a class="big-ticket" href="<?php echo esc_url( $hero['url'] ); ?>" tabindex="<?php echo $is_sample ? '-1' : '0'; ?>">
-				<span class="big-ticket__top">
-					<span class="big-ticket__date"><b><?php echo esc_html( en_fmt_date( $hero['date'], 'j' ) ); ?></b><?php echo esc_html( en_fmt_date( $hero['date'], 'F' ) ); ?></span>
-					<span class="big-ticket__price"><?php echo esc_html( $hero['price'] ); ?></span>
-				</span>
-				<span class="big-ticket__title"><?php echo esc_html( $hero['title'] ); ?></span>
-				<span class="big-ticket__tear"></span>
-				<span class="big-ticket__bottom">
-					<span><?php echo esc_html( $hero['venue'] ); ?><br><small><?php echo esc_html( en_fmt_time( $hero['time'] ) ); ?></small></span>
-					<span class="barcode"></span>
-				</span>
-			</a>
-		</div>
+<section class="hero" <?php if ( $hero_image ) : ?>style="--hero-image:url('<?php echo esc_url( $hero_image ); ?>')"<?php endif; ?>>
+	<div class="wrap hero__inner">
+		<p class="eyebrow"><span class="eyebrow__dot"></span><?php esc_html_e( 'Your campus. Your events. Your platform.', 'eventnest' ); ?></p>
+		<h1 class="hero__title">
+			<span><?php esc_html_e( 'Discover.', 'eventnest' ); ?></span>
+			<span><?php esc_html_e( 'Participate.', 'eventnest' ); ?></span>
+			<span><?php esc_html_e( 'Create.', 'eventnest' ); ?> <em><?php esc_html_e( 'Together.', 'eventnest' ); ?></em></span>
+		</h1>
+		<p class="hero__sub"><?php echo esc_html( en_opt( 'hero_sub' ) ); ?></p>
+		<a class="btn btn--brand" href="<?php echo esc_url( $archive ); ?>">
+			<?php esc_html_e( 'Explore events', 'eventnest' ); ?>
+			<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+		</a>
+		<div class="hero__meta"><span><?php esc_html_e( 'Made for your campus', 'eventnest' ); ?></span><span><?php esc_html_e( 'Discover what’s happening', 'eventnest' ); ?></span></div>
 	</div>
+	<div class="hero__glow hero__glow--one" aria-hidden="true"></div>
+	<div class="hero__glow hero__glow--two" aria-hidden="true"></div>
 </section>
 
-<section class="section section--tight">
-	<div class="wrap">
-		<ul class="chips" aria-label="<?php esc_attr_e( 'Browse by category', 'eventnest' ); ?>">
-			<?php
-			if ( $cats ) {
-				foreach ( $cats as $c ) echo '<li><a class="chip" href="' . esc_url( get_term_link( $c ) ) . '">' . esc_html( $c->name ) . '</a></li>';
-			} else {
-				foreach ( array( 'Music', 'College fests', 'Workshops', 'Meetups', 'Markets', 'Comedy', 'Sports' ) as $n ) echo '<li><a class="chip" href="' . esc_url( $archive ) . '">' . esc_html( $n ) . '</a></li>';
-			}
-			?>
-		</ul>
-	</div>
-</section>
-
-<section class="section">
+<section class="section whats-new" aria-labelledby="whats-new-title">
 	<div class="wrap">
 		<div class="section__head">
-			<h2><?php esc_html_e( 'Coming up', 'eventnest' ); ?></h2>
-			<a class="link-more" href="<?php echo esc_url( $archive ); ?>"><?php esc_html_e( 'See all events', 'eventnest' ); ?></a>
+			<div>
+				<p class="eyebrow eyebrow--small"><?php esc_html_e( 'Happening around campus', 'eventnest' ); ?></p>
+				<h2 id="whats-new-title"><?php esc_html_e( 'What’s New', 'eventnest' ); ?></h2>
+				<p class="section__sub"><?php esc_html_e( 'The latest events, workshops and activities from across campus.', 'eventnest' ); ?></p>
+			</div>
+			<a class="link-more" href="<?php echo esc_url( $archive ); ?>"><?php esc_html_e( 'View all', 'eventnest' ); ?><span aria-hidden="true">→</span></a>
 		</div>
-		<?php if ( $is_sample && current_user_can( 'edit_posts' ) ) : ?>
-			<p class="notice"><?php esc_html_e( 'These are sample events. Go to Events → Add new in your dashboard to publish real ones. Visitors see this notice only if you are logged in.', 'eventnest' ); ?></p>
+		<?php if ( ! $has_events && current_user_can( 'edit_posts' ) ) : ?>
+			<p class="notice"><?php esc_html_e( 'These are preview cards. Add published events in WordPress and they will appear here automatically.', 'eventnest' ); ?></p>
 		<?php endif; ?>
-		<div class="grid">
-			<?php foreach ( $cards as $c ) en_card( $c ); ?>
+		<div class="grid event-grid">
+			<?php foreach ( array_slice( $events, 0, 4 ) as $event ) : ?>
+				<?php en_card( $event ); ?>
+			<?php endforeach; ?>
 		</div>
 	</div>
 </section>
 
-<section class="section" id="how">
+<section class="section closing-soon" aria-labelledby="closing-title">
 	<div class="wrap">
-		<div class="band">
-			<div class="band__copy">
-				<h2><?php esc_html_e( 'Running an event? Be live in ten minutes.', 'eventnest' ); ?></h2>
-				<p><?php esc_html_e( 'Whether it is a college fest, a workshop or a weekend market, you get an event page people can share, ticket sales and a simple way to check guests in.', 'eventnest' ); ?></p>
-				<a class="btn btn--sun" href="<?php echo esc_url( en_opt( 'cta_url' ) ); ?>"><?php echo esc_html( en_opt( 'cta_text' ) ); ?></a>
+		<div class="section__head">
+			<div>
+				<p class="eyebrow eyebrow--small"><?php esc_html_e( 'Save your spot', 'eventnest' ); ?></p>
+				<h2 id="closing-title"><?php esc_html_e( 'Don’t Miss Out!', 'eventnest' ); ?></h2>
+				<p class="section__sub"><?php esc_html_e( 'Registration is closing soon for these campus events.', 'eventnest' ); ?></p>
 			</div>
-			<ol class="steps">
-				<li><b><?php esc_html_e( 'Create your event page', 'eventnest' ); ?></b><span><?php esc_html_e( 'Add the date, venue, photos and ticket price.', 'eventnest' ); ?></span></li>
-				<li><b><?php esc_html_e( 'Share it and sell tickets', 'eventnest' ); ?></b><span><?php esc_html_e( 'Post the link on WhatsApp and Instagram. Guests pay by UPI or card.', 'eventnest' ); ?></span></li>
-				<li><b><?php esc_html_e( 'Check guests in at the door', 'eventnest' ); ?></b><span><?php esc_html_e( 'Scan QR tickets and see sales in one dashboard.', 'eventnest' ); ?></span></li>
-			</ol>
+			<a class="link-more" href="<?php echo esc_url( $archive ); ?>"><?php esc_html_e( 'View all', 'eventnest' ); ?><span aria-hidden="true">→</span></a>
+		</div>
+		<div class="closing-grid">
+			<?php foreach ( $closing as $event ) :
+				$deadline = isset( $event['deadline'] ) ? $event['deadline'] : '';
+				$days_left = $deadline ? (int) floor( ( strtotime( $deadline ) - current_time( 'timestamp' ) ) / DAY_IN_SECONDS ) : 0;
+				$deadline_label = $days_left <= 0 ? __( 'Today', 'eventnest' ) : ( 1 === $days_left ? __( 'Tomorrow', 'eventnest' ) : sprintf( __( 'In %d days', 'eventnest' ), $days_left ) );
+			?>
+				<article class="closing-card">
+					<div class="closing-card__icon" aria-hidden="true"><span>✦</span></div>
+					<div class="closing-card__content">
+						<?php if ( $event['cat'] ) : ?><span class="closing-card__category"><?php echo esc_html( $event['cat'] ); ?></span><?php endif; ?>
+						<h3><a href="<?php echo esc_url( $event['url'] ); ?>"><?php echo esc_html( $event['title'] ); ?></a></h3>
+						<p><?php esc_html_e( 'Registration closes', 'eventnest' ); ?> <strong><?php echo esc_html( $deadline_label ); ?></strong></p>
+					</div>
+					<a class="btn btn--brand btn--sm closing-card__action" href="<?php echo esc_url( $event['url'] ); ?>"><?php esc_html_e( 'Register', 'eventnest' ); ?><span aria-hidden="true">→</span></a>
+				</article>
+			<?php endforeach; ?>
+			<?php if ( empty( $closing ) ) : ?>
+				<div class="empty"><h3><?php esc_html_e( 'You’re all caught up', 'eventnest' ); ?></h3><p><?php esc_html_e( 'There are no registration deadlines coming up this week.', 'eventnest' ); ?></p></div>
+			<?php endif; ?>
 		</div>
 	</div>
 </section>

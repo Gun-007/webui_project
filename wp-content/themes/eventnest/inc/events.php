@@ -36,8 +36,13 @@ function en_meta_fields() {
 	return array(
 		'date'       => array( 'Date', 'date' ),
 		'time'       => array( 'Start time', 'time' ),
+		'end_time'   => array( 'End time', 'time' ),
 		'venue'      => array( 'Venue name', 'text' ),
 		'address'    => array( 'Full address', 'text' ),
+		'registration_deadline' => array( 'Registration deadline', 'date' ),
+		'max_participants' => array( 'Maximum participants (optional)', 'number' ),
+		'rules'      => array( 'Rules & guidelines', 'textarea' ),
+		'highlights' => array( 'Highlights (one per line)', 'textarea' ),
 		'price'      => array( 'Ticket price in ₹ (0 or empty = free)', 'number' ),
 		'ticket_url' => array( 'Ticket or registration link', 'url' ),
 		'organizer'  => array( 'Organizer name', 'text' ),
@@ -54,11 +59,15 @@ add_action( 'add_meta_boxes', function () {
 
 function en_meta_box( $post ) {
 	wp_nonce_field( 'en_save_event', 'en_nonce' );
-	echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
+	echo '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">';
 	foreach ( en_meta_fields() as $key => $f ) {
 		$val  = esc_attr( en_meta( $post->ID, $key ) );
 		$step = $f[1] === 'number' ? ' min="0" step="1"' : '';
-		printf( '<p style="margin:0"><label for="en_%1$s"><strong>%2$s</strong></label><br><input style="width:100%%" type="%3$s" id="en_%1$s" name="en_%1$s" value="%4$s"%5$s></p>', esc_attr( $key ), esc_html( $f[0] ), esc_attr( $f[1] ), $val, $step );
+		if ( 'textarea' === $f[1] ) {
+			printf( '<p style="margin:0;grid-column:1/-1"><label for="en_%1$s"><strong>%2$s</strong></label><br><textarea style="width:100%%;min-height:90px" id="en_%1$s" name="en_%1$s">%3$s</textarea></p>', esc_attr( $key ), esc_html( $f[0] ), esc_textarea( en_meta( $post->ID, $key ) ) );
+		} else {
+			printf( '<p style="margin:0"><label for="en_%1$s"><strong>%2$s</strong></label><br><input style="width:100%%" type="%3$s" id="en_%1$s" name="en_%1$s" value="%4$s"%5$s></p>', esc_attr( $key ), esc_html( $f[0] ), esc_attr( $f[1] ), $val, $step );
+		}
 	}
 	echo '</div>';
 }
@@ -69,7 +78,15 @@ add_action( 'save_post_event', function ( $post_id ) {
 	if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 	foreach ( en_meta_fields() as $key => $f ) {
 		$raw = isset( $_POST[ 'en_' . $key ] ) ? wp_unslash( $_POST[ 'en_' . $key ] ) : '';
-		$val = $f[1] === 'url' ? esc_url_raw( $raw ) : sanitize_text_field( $raw );
+		if ( 'url' === $f[1] ) {
+			$val = esc_url_raw( $raw );
+		} elseif ( 'textarea' === $f[1] ) {
+			$val = sanitize_textarea_field( $raw );
+		} elseif ( 'number' === $f[1] ) {
+			$val = max( 0, absint( $raw ) );
+		} else {
+			$val = sanitize_text_field( $raw );
+		}
 		update_post_meta( $post_id, '_en_' . $key, $val );
 	}
 } );
@@ -98,7 +115,9 @@ function en_card_data( $id ) {
 		'title'  => get_the_title( $id ),
 		'img'    => has_post_thumbnail( $id ) ? get_the_post_thumbnail( $id, 'en-card', array( 'loading' => 'lazy' ) ) : '',
 		'date'   => en_meta( $id, 'date' ),
+		'deadline' => en_meta( $id, 'registration_deadline' ),
 		'time'   => en_meta( $id, 'time' ),
+		'end_time' => en_meta( $id, 'end_time' ),
 		'venue'  => en_meta( $id, 'venue' ),
 		'city'   => $city ? $city->name : '',
 		'cat'    => $cat ? $cat->name : '',
@@ -111,15 +130,16 @@ function en_card_data( $id ) {
 function en_sample_events() {
 	$mk = function ( $title, $days, $time, $venue, $city, $cat, $price, $hue ) {
 		return array( 'url' => '#', 'title' => $title, 'img' => '', 'date' => date( 'Y-m-d', strtotime( "+$days days", current_time( 'timestamp' ) ) ),
+			'deadline' => date( 'Y-m-d', strtotime( '+' . max( 0, $days - 2 ) . ' days', current_time( 'timestamp' ) ) ),
 			'time' => $time, 'venue' => $venue, 'city' => $city, 'cat' => $cat, 'price' => $price, 'hue' => $hue, 'sample' => true );
 	};
 	return array(
-		$mk( 'Campus Beats: Inter-college Music Fest', 6, '17:00', 'Open Air Theatre', 'Your city', 'College fests', '₹299', 250 ),
-		$mk( 'Weekend Pottery Workshop for Beginners', 9, '10:30', 'Clay Studio', 'Your city', 'Workshops', '₹799', 18 ),
-		$mk( 'Founders Meetup: Build in Public', 12, '18:30', 'Co-working Hub', 'Your city', 'Meetups', 'Free', 160 ),
-		$mk( 'Sunday Food and Flea Market', 15, '11:00', 'Riverside Grounds', 'Your city', 'Markets', '₹49', 330 ),
-		$mk( 'Stand-up Comedy Night', 19, '20:00', 'The Loft', 'Your city', 'Comedy', '₹499', 40 ),
-		$mk( 'City Run 10K', 24, '06:00', 'Central Park', 'Your city', 'Sports', '₹399', 200 ),
+		$mk( 'Inter-College Dance Competition', 6, '15:00', 'Main Auditorium', 'Campus', 'Competition', 'Free', 330 ),
+		$mk( 'Tech Club Workshop', 9, '10:00', 'Computer Lab', 'Campus', 'Workshop', 'Free', 205 ),
+		$mk( 'Cultural Fest 2026', 12, '17:00', 'College Ground', 'Campus', 'Cultural', 'Free', 275 ),
+		$mk( 'AI & ML Workshop', 15, '11:00', 'Seminar Hall', 'Campus', 'Technical', 'Free', 220 ),
+		$mk( 'Photography Walk', 19, '08:00', 'Campus Gate', 'Campus', 'Club Event', 'Free', 25 ),
+		$mk( 'Inter-College Coding Challenge', 24, '09:00', 'Innovation Lab', 'Campus', 'Competition', 'Free', 180 ),
 	);
 }
 
@@ -162,8 +182,16 @@ add_action( 'pre_get_posts', function ( $q ) {
 		|| ( $q->is_search() && $q->get( 'post_type' ) === 'event' );
 	if ( ! $is_events ) return;
 
-	$mq = array( array( 'key' => '_en_date', 'value' => current_time( 'Y-m-d' ), 'compare' => '>=', 'type' => 'DATE' ) );
-	if ( ! empty( $_GET['free'] ) ) {
+	$today = current_time( 'Y-m-d' );
+	$mq    = array( array( 'key' => '_en_date', 'value' => $today, 'compare' => '>=', 'type' => 'DATE' ) );
+	$when  = isset( $_GET['when'] ) ? sanitize_key( wp_unslash( $_GET['when'] ) ) : '';
+	if ( 'week' === $when || 'month' === $when ) {
+		$last_day = 'week' === $when
+			? date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS )
+			: date( 'Y-m-t', current_time( 'timestamp' ) );
+		$mq[0] = array( 'key' => '_en_date', 'value' => array( $today, $last_day ), 'compare' => 'BETWEEN', 'type' => 'DATE' );
+	}
+	if ( isset( $_GET['free'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['free'] ) ) ) {
 		$mq[] = array( 'relation' => 'OR',
 			array( 'key' => '_en_price', 'compare' => 'NOT EXISTS' ),
 			array( 'key' => '_en_price', 'value' => array( '', '0' ), 'compare' => 'IN' ) );

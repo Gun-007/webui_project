@@ -1,0 +1,14 @@
+# Local WordPress installation: track only EventNest source files.
+*
+!.gitignore
+!README.md
+!wp-content/
+wp-content/*
+!wp-content/themes/
+wp-content/themes/*
+!wp-content/themes/eventnest/
+wp-content/themes/eventnest/**
+!wp-content/plugins/
+wp-content/plugins/*
+!wp-content/plugins/eventnest-core/
+wp-content/plugins/eventnest-core/**

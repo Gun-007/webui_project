@@ -1,7 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.0.0' );
+define( 'EN_VERSION', '1.1.0' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/customizer.php';
@@ -30,7 +30,7 @@ add_action( 'wp_enqueue_scripts', function () {
 
 // Apply saved theme (light/dark) before paint to avoid a flash.
 add_action( 'wp_head', function () {
-	echo "<script>(function(){try{var t=localStorage.getItem('en-theme');if(!t){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>\n";
+	echo "<script>(function(){try{var t=localStorage.getItem('en-theme')||'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','dark')}})();</script>\n";
 }, 1 );
 
 // Customizer accent colour (light mode only; dark mode keeps its own tuned brand colour).
@@ -41,12 +41,20 @@ add_action( 'wp_head', function () {
 
 function en_fallback_menu() {
 	echo '<ul class="menu">';
-	echo '<li><a href="' . esc_url( home_url( '/' ) ) . '">' . esc_html__( 'Home', 'eventnest' ) . '</a></li>';
-	echo '<li><a href="' . esc_url( get_post_type_archive_link( 'event' ) ) . '">' . esc_html__( 'Explore events', 'eventnest' ) . '</a></li>';
-	echo '<li><a href="' . esc_url( home_url( '/#how' ) ) . '">' . esc_html__( 'For organizers', 'eventnest' ) . '</a></li>';
+	$links = array(
+		__( 'Home', 'eventnest' )         => home_url( '/' ),
+		__( 'Events', 'eventnest' )       => get_post_type_archive_link( 'event' ),
+		__( 'Competitions', 'eventnest' ) => home_url( '/competitions/' ),
+		__( 'Clubs', 'eventnest' )        => home_url( '/clubs/' ),
+		__( 'Proposals', 'eventnest' )    => home_url( '/proposals/' ),
+		__( 'About', 'eventnest' )        => home_url( '/about/' ),
+	);
+	foreach ( $links as $label => $url ) {
+		echo '<li><a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a></li>';
+	}
 	echo '</ul>';
 }
 
 function en_logo_mark() {
-	return '<svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="10" fill="var(--brand)"/><path d="M8 11h16v3.5a2.5 2.5 0 0 0 0 5V23H8v-3.5a2.5 2.5 0 0 0 0-5z" fill="#FFC233"/></svg>';
+	return '<svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--brand)"/><path d="M21.8 10.2a9 9 0 1 0 0 11.6 7.2 7.2 0 0 1 0-11.6Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
