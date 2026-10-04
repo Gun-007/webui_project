@@ -180,6 +180,69 @@ function en_upcoming( $n = 6, $extra = array() ) {
 	), $extra ) );
 }
 
+/* ---------- Competitions page ---------- */
+add_action( 'init', function () {
+	add_shortcode( 'eventnest_competitions', 'en_competitions_shortcode' );
+} );
+
+function en_competitions_shortcode() {
+	if ( ! taxonomy_exists( 'event_type' ) ) {
+		return '<div class="empty"><h2>Competitions are unavailable</h2><p>Activate EventNest Core to browse competitions.</p></div>';
+	}
+
+	$scope = isset( $_GET['scope'] ) ? sanitize_key( wp_unslash( $_GET['scope'] ) ) : '';
+	if ( ! in_array( $scope, array( 'intra', 'inter' ), true ) ) $scope = '';
+	$category = isset( $_GET['competition_category'] ) ? sanitize_title( wp_unslash( $_GET['competition_category'] ) ) : '';
+	$when = isset( $_GET['competition_when'] ) ? sanitize_key( wp_unslash( $_GET['competition_when'] ) ) : '';
+	if ( ! in_array( $when, array( 'week', 'month' ), true ) ) $when = '';
+	$search = isset( $_GET['competition_q'] ) ? sanitize_text_field( wp_unslash( $_GET['competition_q'] ) ) : '';
+	$tax_query = array( 'relation' => 'AND', array( 'taxonomy' => 'event_type', 'field' => 'slug', 'terms' => 'competition' ) );
+	if ( $category && taxonomy_exists( 'event_category' ) ) $tax_query[] = array( 'taxonomy' => 'event_category', 'field' => 'slug', 'terms' => $category );
+	$meta_query = array( 'relation' => 'AND', array( 'key' => '_en_date', 'value' => current_time( 'Y-m-d' ), 'compare' => '>=', 'type' => 'DATE' ) );
+	if ( $when ) {
+		$last_day = 'week' === $when ? wp_date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS ) : wp_date( 'Y-m-t' );
+		$meta_query[0] = array( 'key' => '_en_date', 'value' => array( current_time( 'Y-m-d' ), $last_day ), 'compare' => 'BETWEEN', 'type' => 'DATE' );
+	}
+	if ( $scope ) $meta_query[] = array( 'key' => '_en_scope', 'value' => $scope, 'compare' => '=' );
+	$page = isset( $_GET['cpage'] ) ? max( 1, absint( $_GET['cpage'] ) ) : 1;
+	$query = new WP_Query( array(
+		'post_type' => 'event', 'post_status' => 'publish', 'posts_per_page' => 9, 'paged' => $page,
+		's' => $search, 'tax_query' => $tax_query, 'meta_query' => $meta_query,
+		'meta_key' => '_en_date', 'orderby' => 'meta_value', 'order' => 'ASC',
+	) );
+	$categories = taxonomy_exists( 'event_category' ) ? get_terms( array( 'taxonomy' => 'event_category', 'hide_empty' => false ) ) : array();
+	if ( is_wp_error( $categories ) ) $categories = array();
+	$url = get_permalink();
+	$out = '<section class="en-competitions"><div class="wrap">';
+	$out .= '<p class="section__sub">Browse intra-college and inter-college competitions.</p>';
+	$out .= '<form class="filters en-competition-filters" method="get" action="' . esc_url( $url ) . '">';
+	$out .= '<input class="filters__q" type="search" name="competition_q" value="' . esc_attr( $search ) . '" placeholder="Search competitions" aria-label="Search competitions">';
+	$out .= '<select name="scope" aria-label="Competition scope"><option value="">All competitions</option><option value="intra"' . selected( $scope, 'intra', false ) . '>Intra-College</option><option value="inter"' . selected( $scope, 'inter', false ) . '>Inter-College</option></select>';
+	if ( $categories ) {
+		$out .= '<select name="competition_category" aria-label="Category"><option value="">All categories</option>';
+		foreach ( $categories as $term ) $out .= '<option value="' . esc_attr( $term->slug ) . '"' . selected( $category, $term->slug, false ) . '>' . esc_html( $term->name ) . '</option>';
+		$out .= '</select>';
+	}
+	$out .= '<select name="competition_when" aria-label="Date range"><option value="">Any upcoming date</option><option value="week"' . selected( $when, 'week', false ) . '>Next 7 days</option><option value="month"' . selected( $when, 'month', false ) . '>This month</option></select>';
+	$out .= '<button class="btn btn--brand btn--sm" type="submit">Show competitions</button></form>';
+	if ( $query->have_posts() ) {
+		$out .= '<p class="results-count">' . esc_html( sprintf( _n( '%s competition found', '%s competitions found', (int) $query->found_posts, 'eventnest' ), number_format_i18n( $query->found_posts ) ) ) . '</p><div class="grid event-grid">';
+		while ( $query->have_posts() ) { $query->the_post(); ob_start(); en_card( en_card_data( get_the_ID() ) ); $out .= ob_get_clean(); }
+		$out .= '</div>';
+		if ( $query->max_num_pages > 1 ) {
+			$clean_url = remove_query_arg( 'cpage' );
+			$out .= '<nav class="en-competition-pagination" aria-label="Competition pages">';
+			if ( $page > 1 ) $out .= '<a class="btn btn--ghost" href="' . esc_url( add_query_arg( 'cpage', $page - 1, $clean_url ) ) . '">Previous</a>';
+			if ( $page < $query->max_num_pages ) $out .= '<a class="btn btn--ghost" href="' . esc_url( add_query_arg( 'cpage', $page + 1, $clean_url ) ) . '">Next</a>';
+			$out .= '</nav>';
+		}
+	} else {
+		$out .= '<div class="empty"><h2>No upcoming competitions match these filters</h2><p>Try another category or date range, or clear your search.</p><a class="btn btn--brand" href="' . esc_url( $url ) . '">Clear filters</a></div>';
+	}
+	wp_reset_postdata();
+	return $out . '</div></section>';
+}
+
 /* ---------- Card renderer ---------- */
 function en_card( array $e ) {
 	$day = $e['date'] ? en_fmt_date( $e['date'], 'j' ) : '';

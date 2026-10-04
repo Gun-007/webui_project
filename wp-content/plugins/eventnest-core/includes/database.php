@@ -47,4 +47,21 @@ function enc_create_tables() {
   PRIMARY KEY  (id),
   KEY proposal_id (proposal_id)
 ) $c;" );
+
+	// Club membership applications and their decision history summary.
+	dbDelta( "CREATE TABLE " . enc_table( 'club_memberships' ) . " (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  club_id bigint(20) unsigned NOT NULL,
+  user_id bigint(20) unsigned NOT NULL,
+  status varchar(20) NOT NULL DEFAULT 'pending',
+  message text NULL,
+  review_note text NULL,
+  created_at datetime NOT NULL,
+  reviewed_by bigint(20) unsigned NOT NULL DEFAULT 0,
+  reviewed_at datetime NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY club_user (club_id,user_id),
+  KEY user_id (user_id),
+  KEY membership_status (status)
+) $c;" );
 }

@@ -3,6 +3,77 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_action( 'init', 'enc_register_post_types' );
 
+/** Add the blueprint's starter clubs once, without replacing clubs already entered by the team. */
+function enc_seed_default_clubs() {
+	if ( get_option( 'enc_default_clubs_seeded' ) || ! post_type_exists( 'club' ) ) return;
+	$clubs = array(
+		'tech-club' => array( 'Tech Club', 'A campus community for students interested in technology, workshops, and collaborative projects.' ),
+		'cultural-club' => array( 'Cultural Club', 'A campus community for students interested in culture, creative expression, and college celebrations.' ),
+		'dance-club' => array( 'Dance Club', 'A campus community for students interested in dance, choreography, practice, and performances.' ),
+		'music-club' => array( 'Music Club', 'A campus community for students interested in music, collaboration, and live performance.' ),
+		'sports-club' => array( 'Sports Club', 'A campus community for students interested in sports, fitness, and friendly competition.' ),
+		'photography-club' => array( 'Photography Club', 'A campus community for students interested in photography, visual storytelling, and photo walks.' ),
+		'coding-club' => array( 'Coding Club', 'A campus community for students interested in programming, problem-solving, and building software.' ),
+		'management-club' => array( 'Management Club', 'A campus community for students interested in leadership, entrepreneurship, and business activities.' ),
+	);
+	$complete = true;
+	foreach ( $clubs as $slug => $club ) {
+		$existing = get_posts( array( 'post_type' => 'club', 'name' => $slug, 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
+		if ( $existing ) continue;
+		$result = wp_insert_post( array(
+			'post_type' => 'club', 'post_status' => 'publish', 'post_name' => $slug,
+			'post_title' => $club[0], 'post_content' => $club[1],
+		), true );
+		if ( is_wp_error( $result ) ) $complete = false;
+	}
+	if ( $complete ) update_option( 'enc_default_clubs_seeded', 1, false );
+}
+add_action( 'init', 'enc_seed_default_clubs', 30 );
+
+/** Add one editable, future-dated sample event to each blueprint club once. */
+function enc_seed_default_club_events() {
+	if ( get_option( 'enc_default_club_events_seeded' ) || ! post_type_exists( 'event' ) || ! post_type_exists( 'club' ) || ! taxonomy_exists( 'event_type' ) || ! taxonomy_exists( 'event_category' ) ) return;
+	$events = array(
+		'ai-web-workshop' => array( 'club' => 'tech-club', 'title' => 'AI & Web Development Workshop', 'description' => 'A sample hands-on campus session exploring artificial intelligence and modern web development. Replace the schedule, venue, and description with confirmed event information.', 'days' => 10, 'start' => '10:00', 'end' => '13:00', 'venue' => 'Computer Lab', 'type' => 'Workshop', 'category' => 'Technical', 'scope' => '' ),
+		'campus-culture-night' => array( 'club' => 'cultural-club', 'title' => 'Campus Culture Night', 'description' => 'A sample evening celebrating student creativity and campus culture. Replace the schedule, venue, and description with confirmed event information.', 'days' => 14, 'start' => '17:00', 'end' => '20:00', 'venue' => 'Main Auditorium', 'type' => 'Fest', 'category' => 'Cultural', 'scope' => '' ),
+		'dance-crew-auditions' => array( 'club' => 'dance-club', 'title' => 'Dance Crew Open Auditions', 'description' => 'A sample open audition for students interested in joining the campus dance community. Replace the schedule, venue, and details with confirmed information.', 'days' => 18, 'start' => '15:00', 'end' => '17:00', 'venue' => 'Dance Studio', 'type' => 'Audition', 'category' => 'Cultural', 'scope' => '' ),
+		'acoustic-open-mic' => array( 'club' => 'music-club', 'title' => 'Acoustic Open Mic', 'description' => 'A sample open-mic session for campus singers and instrumentalists. Replace the schedule, venue, and details with confirmed information.', 'days' => 22, 'start' => '16:00', 'end' => '19:00', 'venue' => 'Seminar Hall', 'type' => 'Club Event', 'category' => 'Cultural', 'scope' => '' ),
+		'inter-club-badminton' => array( 'club' => 'sports-club', 'title' => 'Inter-Club Badminton Doubles', 'description' => 'A sample intra-college doubles competition for campus clubs. Replace the schedule, venue, and rules with confirmed event information.', 'days' => 26, 'start' => '09:00', 'end' => '15:00', 'venue' => 'Indoor Sports Hall', 'type' => 'Competition', 'category' => 'Sports', 'scope' => 'intra' ),
+		'campus-photo-walk' => array( 'club' => 'photography-club', 'title' => 'Campus Photo Walk', 'description' => 'A sample guided photo walk for students interested in campus photography and visual storytelling. Replace the schedule and details with confirmed information.', 'days' => 30, 'start' => '08:00', 'end' => '10:00', 'venue' => 'Main Gate', 'type' => 'Club Event', 'category' => 'Cultural', 'scope' => '' ),
+		'campus-coding-challenge' => array( 'club' => 'coding-club', 'title' => 'Campus Coding Challenge', 'description' => 'A sample programming challenge for student teams. Replace the schedule, venue, and rules with confirmed event information.', 'days' => 34, 'start' => '09:00', 'end' => '16:00', 'venue' => 'Innovation Lab', 'type' => 'Competition', 'category' => 'Technical', 'scope' => 'intra' ),
+		'startup-pitch-challenge' => array( 'club' => 'management-club', 'title' => 'Startup Pitch & Case Challenge', 'description' => 'A sample student challenge focused on business ideas and case analysis. Replace the schedule, venue, and rules with confirmed event information.', 'days' => 38, 'start' => '10:00', 'end' => '15:00', 'venue' => 'Seminar Hall', 'type' => 'Competition', 'category' => 'Management', 'scope' => 'intra' ),
+	);
+	$admin_ids = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+	if ( ! $admin_ids ) return;
+	$now = current_time( 'timestamp', true );
+	$complete = true;
+	foreach ( $events as $slug => $event ) {
+		$existing = get_posts( array( 'post_type' => 'event', 'name' => $slug, 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
+		if ( $existing ) continue;
+		$clubs = get_posts( array( 'post_type' => 'club', 'name' => $event['club'], 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
+		if ( ! $clubs ) { $complete = false; continue; }
+		$date = wp_date( 'Y-m-d', $now + (int) $event['days'] * DAY_IN_SECONDS );
+		$deadline = wp_date( 'Y-m-d', $now + max( 1, (int) $event['days'] - 2 ) * DAY_IN_SECONDS );
+		$post_id = wp_insert_post( array(
+			'post_type' => 'event', 'post_status' => 'publish', 'post_name' => $slug,
+			'post_title' => $event['title'], 'post_content' => $event['description'], 'post_author' => (int) $admin_ids[0],
+			'meta_input' => array(
+				'_en_date' => $date, '_en_start' => $event['start'], '_en_end' => $event['end'],
+				'_en_venue' => $event['venue'], '_en_deadline' => $deadline, '_en_max' => '100',
+				'_en_fee' => '0', '_en_scope' => $event['scope'], '_en_club' => (int) $clubs[0],
+			),
+		), true );
+		if ( is_wp_error( $post_id ) ) { $complete = false; continue; }
+		foreach ( array( 'event_type' => $event['type'], 'event_category' => $event['category'] ) as $taxonomy => $name ) {
+			$term = term_exists( $name, $taxonomy );
+			if ( ! $term ) $term = wp_insert_term( $name, $taxonomy );
+			if ( ! is_wp_error( $term ) ) wp_set_object_terms( $post_id, (int) ( is_array( $term ) ? $term['term_id'] : $term ), $taxonomy );
+		}
+	}
+	if ( $complete ) update_option( 'enc_default_club_events_seeded', 1, false );
+}
+add_action( 'init', 'enc_seed_default_club_events', 35 );
+
 function enc_register_post_types() {
 	$common = array( 'show_in_rest' => true, 'map_meta_cap' => true );
 

@@ -48,12 +48,17 @@ Pages live in each computer's WordPress database, so create them once on every n
 | Register Student | `register-student` | `[eventnest_register_student]` |
 | Register Faculty | `register-faculty` | `[eventnest_register_faculty]` |
 | Dashboard | `dashboard` | `[eventnest_dashboard]` |
+| Competitions | `competitions` | `[eventnest_competitions]` |
+| Event Registrations | `event-registrations` | `[eventnest_all_registrations]` (administrator only) |
 | My Registrations | `my-registrations` | `[eventnest_my_registrations]` |
+| My Clubs | `my-clubs` | `[eventnest_my_clubs]` |
 | Submit Proposal | `submit-proposal` | `[eventnest_submit_proposal]` |
 | My Proposals | `my-proposals` | `[eventnest_my_proposals]` |
 | Review Proposals | `review-proposals` | `[eventnest_review_proposals]` |
 
 Publish each page. The EventNest fallback navigation links visitors to proposal submission, students to My Proposals, and reviewers to Review Proposals. If you create a custom WordPress menu, set its links to the page slugs above.
+
+The **My Clubs** page is created automatically if it does not already exist.
 
 ## 5. Create users and assign reviewer roles
 
@@ -65,9 +70,17 @@ Publish each page. The EventNest fallback navigation links visitors to proposal 
 ## 6. Try the event registration flow
 
 1. As an administrator or authorized event editor, open **Events → Add New**.
-2. Add a title, description, future event date, venue, registration deadline, optional capacity, and featured image; then publish the event.
+2. Add a title, description, future event date, venue, registration deadline, optional capacity, and featured image; then publish the event. For competitions, also assign the **Competition** event type and select **Intra-College** or **Inter-College** scope.
 3. Log in as a student and open the event. Choose **Register**.
 4. Confirm the event appears in **My Registrations**. Students may cancel before the event date.
+
+The Competitions page lists upcoming published events marked as Competition and can filter by scope, category, search text, and date range.
+
+## Clubs directory and event participants
+
+- The public Clubs directory is the Club post type archive at `/clubs/`; it does not need a WordPress Page or shortcode. EventNest creates starter entries for Tech, Cultural, Dance, Music, Sports, Photography, Coding, and Management clubs once, plus one future-dated sample event assigned to each. These are demo listings: edit or remove them to match confirmed campus information. Add club images and leadership under **Clubs → Edit Club**; add events under **Events → Edit Event** and choose the club in Event details.
+- The **Event Registrations** page is restricted to WordPress Administrators because it displays student names, PRNs, and email addresses. Create the page using the table above; administrators can open it from their EventNest Dashboard or use `/event-registrations/`.
+- Students apply from an individual club page. Their pending applications appear on that page only to its assigned Club Head, Faculty in-charge, and Administrators. After approval, the student must sign in to the same account to see **You are a member of this club** and the updated member count; the status also appears under **Dashboard → My Clubs**. Reviewers return to the club's application queue and should not see the student application form. Club membership data is stored locally with the WordPress database.
 
 Only published upcoming events appear in event listings. An approved proposal initially creates a draft event and will not appear until staff complete and publish it.
 

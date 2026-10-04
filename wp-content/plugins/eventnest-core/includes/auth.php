@@ -232,11 +232,14 @@ function enc_dashboard_shortcode() {
 		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' ) ) . '</span></p></div>';
 		if ( function_exists( 'enc_student_stats' ) ) {
 			$stats = enc_student_stats( $user->ID );
-			$out .= '<div class="en-student-stats"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['registered'] ) ) . '</strong><span>Registrations</span></a><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['upcoming'] ) ) . '</strong><span>Upcoming</span></a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['proposals'] ) ) . '</strong><span>Proposals</span></a></div><p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '">My Registrations</a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '">My Proposals</a><a href="' . esc_url( home_url( '/submit-proposal/' ) ) . '">Propose an event</a></p>';
+			$out .= '<div class="en-student-stats"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['registered'] ) ) . '</strong><span>Registrations</span></a><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['upcoming'] ) ) . '</strong><span>Upcoming</span></a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['proposals'] ) ) . '</strong><span>Proposals</span></a></div><p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '">My Registrations</a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '">My Proposals</a><a href="' . esc_url( home_url( '/my-clubs/' ) ) . '">My Clubs</a><a href="' . esc_url( home_url( '/submit-proposal/' ) ) . '">Propose an event</a></p>';
 		}
 	}
 	if ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) {
 		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/review-proposals/' ) ) . '">Review Proposals</a></p>';
+	}
+	if ( current_user_can( 'manage_options' ) ) {
+		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/event-registrations/' ) ) . '">View event registrations</a></p>';
 	}
 	$out .= '<div class="en-dashboard__actions"><a class="btn btn--brand" href="' . esc_url( get_post_type_archive_link( 'event' ) ) . '">Browse events</a> <a class="btn btn--ghost" href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a></div></section>';
 	return $out;

@@ -1,10 +1,11 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.2.4' );
+define( 'EN_VERSION', '1.2.5' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/customizer.php';
+require_once get_template_directory() . '/inc/clubs.php';
 
 add_action( 'after_setup_theme', function () {
 	load_theme_textdomain( 'eventnest', get_template_directory() . '/languages' );

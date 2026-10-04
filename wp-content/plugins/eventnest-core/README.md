@@ -12,7 +12,9 @@ Create these WordPress pages and place the matching shortcode in each page's con
 | `register-student` | `[eventnest_register_student]` |
 | `register-faculty` | `[eventnest_register_faculty]` |
 | `dashboard` | `[eventnest_dashboard]` |
+| `event-registrations` | `[eventnest_all_registrations]` |
 | `my-registrations` | `[eventnest_my_registrations]` |
+| `my-clubs` | `[eventnest_my_clubs]` |
 | `submit-proposal` | `[eventnest_submit_proposal]` |
 | `my-proposals` | `[eventnest_my_proposals]` |
 | `review-proposals` | `[eventnest_review_proposals]` |
@@ -28,3 +30,9 @@ These forms use WordPress accounts and nonces. Passwords are stored through Word
 ## Student participation pages
 
 The event detail page uses EventNest's internal registration system when this plugin is active. Registrations are limited to signed-in accounts with the `en_register_event` capability. The My Registrations page shows only the current user's records and permits cancellation before the event date. Team-registration data functions exist, but the student-facing team form is a later enhancement. Proposal submissions use the core approval workflow; students can see their proposal status and review history on My Proposals, and can edit/resubmit proposals marked Needs changes.
+
+The Event Registrations shortcode is administrator-only and shows participant name, PRN, email, event, team, status, and registration time, with filters and pagination. The public Clubs archive and club detail templates live in the EventNest theme at `/clubs/` and `/clubs/{club}/`.
+
+On the next site request, EventNest creates starter records for Tech, Cultural, Dance, Music, Sports, Photography, Coding, and Management clubs, and one future-dated sample event for each. Existing records with those slugs are preserved. These demo listings can be edited or deleted under **Clubs** and **Events**; replace their dates, venues, and descriptions with confirmed information before sharing them as real campus events.
+
+Students can apply to join a club from its public detail page. Only that club's assigned faculty in-charge or club head, plus administrators, can review pending applications. Students see application decisions on the club page and their My Clubs page.
