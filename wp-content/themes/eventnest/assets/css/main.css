@@ -435,4 +435,38 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .btn--danger{border-color:#773242;background:#35131D;color:#FF9CAE}
 .btn--danger:hover{background:#4A1927}
 @media(max-width:620px){.en-student-stats{grid-template-columns:1fr 1fr}.en-student-card{display:grid}.en-student-card__action{justify-self:start}.en-dashboard__links{display:grid;gap:.5rem}}
+
+/* About page */
+.en-about-hero{position:relative;overflow:hidden;padding:clamp(3.5rem,8vw,6.8rem) 0;background:radial-gradient(ellipse at 84% 22%,rgba(255,40,81,.14),transparent 42%),#0A0D14;border-bottom:1px solid #202633;color:#F5F7FB}
+.en-about-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.035) 0 1px,transparent 1px 16%);opacity:.45;pointer-events:none}
+.en-about-hero__grid{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.8fr);gap:clamp(2rem,6vw,4rem);align-items:center}
+.en-about-hero h1{max-width:11ch;margin:.1rem 0 1rem;font-size:clamp(3.2rem,9vw,7.4rem);letter-spacing:0;line-height:.9}
+.en-about-hero__lead{max-width:58ch;margin:0;color:#C9CFDA;font-size:clamp(1rem,2vw,1.2rem)}
+.en-about-hero__actions{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:2rem}
+.en-about-hero .btn--brand{background:#FF2851;color:#fff}
+.en-about-hero .btn--ghost{border-color:#333A48;color:#F5F7FB;background:rgba(255,255,255,.03)}
+.en-about-snapshot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+.en-about-snapshot div{min-height:132px;padding:1.1rem;border:1px solid #252C39;border-radius:16px;background:linear-gradient(145deg,#121721,#0C1018)}
+.en-about-snapshot span{display:block;color:#FF718B;font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.en-about-snapshot strong{display:block;margin-top:1.8rem;color:#F5F7FB;font:800 clamp(1.55rem,3vw,2.35rem)/1 var(--font-display)}
+.en-about-section .section__head{max-width:780px}
+.en-about-values,.en-about-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.en-about-values article,.en-about-roles article{padding:1.25rem;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.en-about-values span{display:inline-grid;place-items:center;width:38px;height:38px;margin-bottom:1rem;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-weight:800}
+.en-about-values h3,.en-about-roles h3{margin-bottom:.45rem;font-size:1.25rem}
+.en-about-values p,.en-about-roles p{margin:0;color:var(--muted)}
+.en-about-band{background:linear-gradient(135deg,#111827,#090D14);color:#F5F7FB;border-block:1px solid #202633}
+.en-about-flow{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1fr);gap:2rem;align-items:start}
+.en-about-flow h2{font-size:clamp(2rem,4vw,3.2rem);letter-spacing:0}
+.en-about-flow ol{counter-reset:about-flow;display:grid;gap:.8rem;margin:0;padding:0;list-style:none}
+.en-about-flow li{counter-increment:about-flow;display:grid;grid-template-columns:auto 1fr;gap:.8rem;padding:1rem;border:1px solid #293141;border-radius:14px;background:#0D121B}
+.en-about-flow li::before{content:counter(about-flow);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#FF2851;color:#fff;font-weight:800}
+.en-about-flow strong{display:block;color:#fff}
+.en-about-flow span{display:block;margin-top:.2rem;color:#B8C0CE}
+.en-about-cta__inner{display:flex;justify-content:space-between;gap:2rem;align-items:center;padding:clamp(1.4rem,4vw,2.4rem);border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.en-about-cta h2{font-size:clamp(1.8rem,4vw,3rem)}
+.en-about-cta p{max-width:58ch;margin:0;color:var(--muted)}
+.en-about-cta__actions{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:flex-end}
+@media(max-width:860px){.en-about-hero__grid,.en-about-flow{grid-template-columns:1fr}.en-about-values,.en-about-roles{grid-template-columns:1fr}.en-about-cta__inner{display:grid}.en-about-cta__actions{justify-content:flex-start}}
+@media(max-width:560px){.en-about-snapshot{grid-template-columns:1fr}.en-about-hero__actions,.en-about-cta__actions{display:grid}.en-about-hero__actions .btn,.en-about-cta__actions .btn{width:100%}}
 @media(max-width:700px){.en-review-card__facts{grid-template-columns:1fr 1fr}}

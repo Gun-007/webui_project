@@ -55,8 +55,9 @@ Pages live in each computer's WordPress database, so create them once on every n
 | Submit Proposal | `submit-proposal` | `[eventnest_submit_proposal]` |
 | My Proposals | `my-proposals` | `[eventnest_my_proposals]` |
 | Review Proposals | `review-proposals` | `[eventnest_review_proposals]` |
+| About | `about` | Leave content empty; the EventNest theme uses `page-about.php` automatically |
 
-Publish each page. The EventNest fallback navigation links visitors to proposal submission, students to My Proposals, and reviewers to Review Proposals. If you create a custom WordPress menu, set its links to the page slugs above.
+Publish each page. The About page must use the slug `about`; it does not need a Shortcode block because the theme renders its full layout from `wp-content/themes/eventnest/page-about.php`. The EventNest fallback navigation links visitors to proposal submission, students to My Proposals, and reviewers to Review Proposals. If you create a custom WordPress menu, set its links to the page slugs above.
 
 The **My Clubs** page is created automatically if it does not already exist.
 
