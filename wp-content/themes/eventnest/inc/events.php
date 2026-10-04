@@ -338,67 +338,121 @@ function en_card( array $e ) {
 
 /* ---------- Event archive filtering ---------- */
 
+/* =========================================================
+ * EVENT ARCHIVE FILTERING
+ * ========================================================= */
+
 add_action( 'pre_get_posts', function ( $q ) {
 
-	if ( is_admin() || ! $q->is_main_query() ) {
+	/*
+	 * Never modify WordPress admin queries.
+	 */
+	if ( is_admin() ) {
 		return;
 	}
 
+
 	/*
-	 * Detect the Event archive/search query.
+	 * Only modify the main query.
 	 */
+	if ( ! $q->is_main_query() ) {
+		return;
+	}
+
+
+	/*
+	 * Detect EventNest event pages.
+	 *
+	 * Includes:
+	 * - /events/
+	 * - event category archives
+	 * - event city archives
+	 * - event searches
+	 */
+
 	$post_type = $q->get( 'post_type' );
 
-	$is_event_archive =
-		$q->is_post_type_archive( 'event' )
-		|| 'event' === $post_type
-		|| (
-			is_array( $post_type )
-			&& in_array( 'event', $post_type, true )
-		)
-		|| $q->is_tax( array( 'event_category', 'event_city' ) );
+	$is_event_search =
+		$q->is_search()
+		&& (
+			'event' === $post_type
+			|| (
+				is_array( $post_type )
+				&& in_array( 'event', $post_type, true )
+			)
+		);
 
-	if ( ! $is_event_archive ) {
+	$is_event_archive =
+		$q->is_post_type_archive( 'event' );
+
+	$is_event_tax =
+		$q->is_tax(
+			array(
+				'event_category',
+				'event_city',
+			)
+		);
+
+
+	if (
+		! $is_event_archive
+		&& ! $is_event_tax
+		&& ! $is_event_search
+	) {
 		return;
 	}
 
 
 	/*
-	 * Make absolutely sure the query only contains Events.
+	 * -------------------------------------------------------
+	 * BASIC EVENT QUERY
+	 * -------------------------------------------------------
 	 */
+
 	$q->set( 'post_type', 'event' );
-	$q->set( 'post_status', 'publish' );
+
 	$q->set( 'posts_per_page', 12 );
 
 
 	/*
-	 * Event date.
+	 * -------------------------------------------------------
+	 * DATE FILTER
+	 *
+	 * Only show upcoming events.
+	 * -------------------------------------------------------
 	 */
+
+	$today = current_time( 'Y-m-d' );
+
 	$date_key = en_meta_key( 'date' );
 
 
+	$meta_query = array(
+
+		'relation' => 'AND',
+
+		array(
+			'key'     => $date_key,
+			'value'   => $today,
+			'compare' => '>=',
+			'type'    => 'DATE',
+		),
+
+	);
+
+
 	/*
-	 * Build meta query.
+	 * -------------------------------------------------------
+	 * WHEN FILTER
 	 *
-	 * IMPORTANT:
-	 * We do NOT require a date here initially.
-	 * This prevents an event from disappearing just
-	 * because the date field wasn't saved correctly.
+	 * ?when=week
+	 * ?when=month
+	 * -------------------------------------------------------
 	 */
-	$meta_query = array();
 
-
-	/*
-	 * Date filter.
-	 */
 	$when = isset( $_GET['when'] )
-		? sanitize_key(
-			wp_unslash( $_GET['when'] )
-		)
+		? sanitize_key( wp_unslash( $_GET['when'] ) )
 		: '';
-
-
-	$today = current_time( 'Y-m-d' );
 
 
 	if ( 'week' === $when ) {
@@ -408,47 +462,59 @@ add_action( 'pre_get_posts', function ( $q ) {
 			current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS )
 		);
 
+
 		$meta_query[] = array(
+
 			'key'     => $date_key,
-			'value'   => array( $today, $last_day ),
+
+			'value'   => array(
+				$today,
+				$last_day,
+			),
+
 			'compare' => 'BETWEEN',
+
 			'type'    => 'DATE',
+
 		);
 
-	} elseif ( 'month' === $when ) {
+	}
+
+
+	if ( 'month' === $when ) {
 
 		$last_day = wp_date(
 			'Y-m-t',
 			current_time( 'timestamp' )
 		);
 
+
 		$meta_query[] = array(
+
 			'key'     => $date_key,
-			'value'   => array( $today, $last_day ),
+
+			'value'   => array(
+				$today,
+				$last_day,
+			),
+
 			'compare' => 'BETWEEN',
+
 			'type'    => 'DATE',
-		);
 
-	} else {
-
-		/*
-		 * Default:
-		 * show upcoming events.
-		 *
-		 * We use EXISTS instead of forcing a date value
-		 * so events with other valid data don't disappear.
-		 */
-		$meta_query[] = array(
-			'key'     => $date_key,
-			'compare' => 'EXISTS',
 		);
 
 	}
 
 
 	/*
-	 * Free-only filter.
+	 * -------------------------------------------------------
+	 * FREE EVENTS FILTER
+	 *
+	 * ?free=1
+	 * -------------------------------------------------------
 	 */
+
 	$free = isset( $_GET['free'] )
 		&& '1' === sanitize_text_field(
 			wp_unslash( $_GET['free'] )
@@ -459,7 +525,9 @@ add_action( 'pre_get_posts', function ( $q ) {
 
 		$price_key = en_meta_key( 'price' );
 
+
 		$meta_query[] = array(
+
 			'relation' => 'OR',
 
 			array(
@@ -483,62 +551,86 @@ add_action( 'pre_get_posts', function ( $q ) {
 
 
 	/*
-	 * Category filter.
+	 * -------------------------------------------------------
+	 * APPLY META QUERY
+	 * -------------------------------------------------------
 	 */
-	$tax_query = array();
+
+	$q->set(
+		'meta_query',
+		$meta_query
+	);
 
 
-	if ( ! empty( $_GET['event_category'] ) ) {
+	/*
+	 * -------------------------------------------------------
+	 * CATEGORY + CITY FILTERS
+	 * -------------------------------------------------------
+	 */
 
-		$category = sanitize_title(
-			wp_unslash(
-				$_GET['event_category']
-			)
+	$tax_query = array(
+		'relation' => 'AND',
+	);
+
+
+	/*
+	 * Category
+	 */
+
+	$category = isset( $_GET['event_category'] )
+		? sanitize_title(
+			wp_unslash( $_GET['event_category'] )
+		)
+		: '';
+
+
+	if ( $category ) {
+
+		$tax_query[] = array(
+
+			'taxonomy' => 'event_category',
+
+			'field' => 'slug',
+
+			'terms' => $category,
+
 		);
-
-		if ( $category ) {
-
-			$tax_query[] = array(
-				'taxonomy' => 'event_category',
-				'field'    => 'slug',
-				'terms'    => $category,
-			);
-
-		}
 
 	}
 
 
 	/*
-	 * City filter.
+	 * City
 	 */
-	if ( ! empty( $_GET['event_city'] ) ) {
 
-		$city = sanitize_title(
-			wp_unslash(
-				$_GET['event_city']
-			)
+	$city = isset( $_GET['event_city'] )
+		? sanitize_title(
+			wp_unslash( $_GET['event_city'] )
+		)
+		: '';
+
+
+	if ( $city ) {
+
+		$tax_query[] = array(
+
+			'taxonomy' => 'event_city',
+
+			'field' => 'slug',
+
+			'terms' => $city,
+
 		);
-
-		if ( $city ) {
-
-			$tax_query[] = array(
-				'taxonomy' => 'event_city',
-				'field'    => 'slug',
-				'terms'    => $city,
-			);
-
-		}
 
 	}
 
 
 	/*
-	 * Apply taxonomy filtering.
+	 * Apply taxonomy filters only when
+	 * something was actually selected.
 	 */
-	if ( ! empty( $tax_query ) ) {
 
-		$tax_query['relation'] = 'AND';
+	if ( count( $tax_query ) > 1 ) {
 
 		$q->set(
 			'tax_query',
@@ -549,28 +641,26 @@ add_action( 'pre_get_posts', function ( $q ) {
 
 
 	/*
-	 * Apply meta filtering.
+	 * -------------------------------------------------------
+	 * SEARCH
+	 *
+	 * ?s=AI
+	 * -------------------------------------------------------
+	 *
+	 * WordPress will search:
+	 * - Event title
+	 * - Event content
+	 * - Excerpt
 	 */
-	if ( ! empty( $meta_query ) ) {
 
-		$q->set(
-			'meta_query',
-			$meta_query
-		);
-
-	}
+	$search = isset( $_GET['s'] )
+		? sanitize_text_field(
+			wp_unslash( $_GET['s'] )
+		)
+		: '';
 
 
-	/*
-	 * Search.
-	 */
-	if ( ! empty( $_GET['s'] ) ) {
-
-		$search = sanitize_text_field(
-			wp_unslash(
-				$_GET['s']
-			)
-		);
+	if ( $search ) {
 
 		$q->set(
 			's',
@@ -581,8 +671,13 @@ add_action( 'pre_get_posts', function ( $q ) {
 
 
 	/*
-	 * Sort events by event date.
+	 * -------------------------------------------------------
+	 * SORTING
+	 *
+	 * Always show the nearest upcoming events first.
+	 * -------------------------------------------------------
 	 */
+
 	$q->set(
 		'meta_key',
 		$date_key
@@ -596,6 +691,18 @@ add_action( 'pre_get_posts', function ( $q ) {
 	$q->set(
 		'order',
 		'ASC'
+	);
+
+
+	/*
+	 * -------------------------------------------------------
+	 * Tell WordPress this is an Event query.
+	 * -------------------------------------------------------
+	 */
+
+	$q->set(
+		'post_type',
+		'event'
 	);
 
 } );

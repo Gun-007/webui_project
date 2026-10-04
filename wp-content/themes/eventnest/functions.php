@@ -5,6 +5,7 @@ define( 'EN_VERSION', '1.2.6' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/demo-events.php';
+require_once get_template_directory() . '/inc/demo-events.php';
 require_once get_template_directory() . '/inc/customizer.php';
 require_once get_template_directory() . '/inc/clubs.php';
 

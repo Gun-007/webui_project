@@ -1,25 +1,15 @@
 <?php
 /**
  * EventNest Events Archive
- *
- * Displays:
- * - Event search
- * - Category filter
- * - City filter
- * - Date range filter
- * - Free event filter
- * - Dynamic event cards
- * - Pagination
  */
 
 get_header();
 
-global $wp_query;
-
-
-/* =========================================================
- * GET EVENT FILTER DATA
- * ========================================================= */
+/*
+ * ---------------------------------------------------------
+ * Get available filters
+ * ---------------------------------------------------------
+ */
 
 $cities = get_terms(
 	array(
@@ -39,63 +29,50 @@ $cities = is_wp_error( $cities ) ? array() : $cities;
 $cats   = is_wp_error( $cats ) ? array() : $cats;
 
 
-/* =========================================================
- * CURRENT FILTER VALUES
- * ========================================================= */
+/*
+ * ---------------------------------------------------------
+ * Current filter values
+ * ---------------------------------------------------------
+ */
 
-$cur_city = get_query_var( 'event_city' );
-$cur_cat  = get_query_var( 'event_category' );
+$cur_search = isset( $_GET['s'] )
+	? sanitize_text_field( wp_unslash( $_GET['s'] ) )
+	: '';
 
-$when = isset( $_GET['when'] )
+$cur_city = isset( $_GET['event_city'] )
+	? sanitize_key( wp_unslash( $_GET['event_city'] ) )
+	: '';
+
+$cur_cat = isset( $_GET['event_category'] )
+	? sanitize_key( wp_unslash( $_GET['event_category'] ) )
+	: '';
+
+$cur_when = isset( $_GET['when'] )
 	? sanitize_key( wp_unslash( $_GET['when'] ) )
 	: '';
 
-$free = isset( $_GET['free'] )
-	&& '1' === sanitize_text_field( wp_unslash( $_GET['free'] ) );
+$cur_free = isset( $_GET['free'] )
+		&& '1' === sanitize_text_field( wp_unslash( $_GET['free'] ) );
 
 
 /*
- * If filtering through GET parameters,
- * read the selected taxonomy values.
+ * ---------------------------------------------------------
+ * Page title
+ * ---------------------------------------------------------
  */
-if ( isset( $_GET['event_city'] ) ) {
-	$cur_city = sanitize_title(
-		wp_unslash( $_GET['event_city'] )
-	);
-}
 
-if ( isset( $_GET['event_category'] ) ) {
-	$cur_cat = sanitize_title(
-		wp_unslash( $_GET['event_category'] )
-	);
-}
-
-
-/*
- * If the visitor arrived directly on a taxonomy archive,
- * use the queried taxonomy term.
- */
-if ( is_tax( 'event_city' ) ) {
-	$cur_city = get_queried_object()->slug;
-}
-
-if ( is_tax( 'event_category' ) ) {
-	$cur_cat = get_queried_object()->slug;
-}
-
-
-/* =========================================================
- * PAGE TITLE
- * ========================================================= */
-
-if ( is_search() ) {
+if ( $cur_search ) {
 
 	$title = sprintf(
 		__( 'Results for “%s”', 'eventnest' ),
-		get_search_query()
+		$cur_search
 	);
 
-} elseif ( is_tax() ) {
+} elseif ( is_tax( 'event_city' ) ) {
+
+	$title = single_term_title( '', false );
+
+} elseif ( is_tax( 'event_category' ) ) {
 
 	$title = single_term_title( '', false );
 
@@ -106,26 +83,23 @@ if ( is_search() ) {
 }
 
 
-/* =========================================================
- * CHECK WHETHER FILTERS ARE ACTIVE
- * ========================================================= */
+/*
+ * ---------------------------------------------------------
+ * Count results
+ * ---------------------------------------------------------
+ */
 
-$has_filters = (bool) (
-	get_search_query()
-	|| $cur_city
-	|| $cur_cat
-	|| $when
-	|| $free
-);
+global $wp_query;
 
-
-/* =========================================================
- * CLEAR FILTER URL
- * ========================================================= */
-
-$clear_url = get_post_type_archive_link( 'event' );
+$result_count = isset( $wp_query->found_posts )
+	? (int) $wp_query->found_posts
+	: 0;
 
 ?>
+
+<!-- =====================================================
+     EVENTS PAGE HEADER
+     ===================================================== -->
 
 <section class="page-head page-head--events">
 
@@ -136,12 +110,7 @@ $clear_url = get_post_type_archive_link( 'event' );
 			<div>
 
 				<p class="eyebrow eyebrow--small">
-					<?php
-					esc_html_e(
-						'Find your next campus moment',
-						'eventnest'
-					);
-					?>
+					EventNest
 				</p>
 
 				<h1>
@@ -149,193 +118,122 @@ $clear_url = get_post_type_archive_link( 'event' );
 				</h1>
 
 				<p class="section__sub">
-					<?php
-					esc_html_e(
-						'Discover competitions, workshops, club activities and everything happening across your campus.',
-						'eventnest'
-					);
-					?>
+					Discover competitions, workshops, club activities
+					and campus events.
 				</p>
 
 			</div>
-
-
-			<?php if ( current_user_can( 'edit_posts' ) ) : ?>
-
-				<a
-					class="btn btn--ghost btn--sm page-head__create"
-					href="<?php echo esc_url( admin_url( 'post-new.php?post_type=event' ) ); ?>"
-				>
-					+ <?php esc_html_e( 'Add event', 'eventnest' ); ?>
-				</a>
-
-			<?php endif; ?>
 
 		</div>
 
 
 		<!-- =================================================
-		     EVENT FILTER FORM
-		================================================== -->
+		     FILTER FORM
+		     IMPORTANT:
+		     Submit directly to /events/
+		     ================================================= -->
 
 		<form
 			class="filters filters--events"
 			method="get"
-			action="<?php echo esc_url( $clear_url ); ?>"
+			action="<?php echo esc_url( get_post_type_archive_link( 'event' ) ); ?>"
 		>
 
-			<!-- IMPORTANT:
-			     Force WordPress search to search the Event CPT -->
-			<input
-				type="hidden"
-				name="post_type"
-				value="event"
-			>
+			<!-- Search -->
 
-
-			<!-- SEARCH -->
-
-			<div class="filters__search">
-
-				<svg
-					aria-hidden="true"
-					viewBox="0 0 24 24"
-				>
-					<circle
-						cx="11"
-						cy="11"
-						r="7"
-					></circle>
-
-					<path
-						d="m20 20-4-4"
-					></path>
-				</svg>
+			<div class="filters--events__search">
 
 				<input
 					class="filters__q"
 					type="search"
 					name="s"
-					value="<?php echo esc_attr( get_search_query() ); ?>"
-					placeholder="<?php esc_attr_e( 'Search events, workshops, competitions...', 'eventnest' ); ?>"
+					value="<?php echo esc_attr( $cur_search ); ?>"
+					placeholder="<?php esc_attr_e( 'Search events...', 'eventnest' ); ?>"
 					aria-label="<?php esc_attr_e( 'Search events', 'eventnest' ); ?>"
 				>
 
 			</div>
 
 
-			<!-- CATEGORY -->
-
-			<?php if ( $cats ) : ?>
-
-				<select
-					name="event_category"
-					aria-label="<?php esc_attr_e( 'Category', 'eventnest' ); ?>"
-				>
-
-					<option value="">
-						<?php
-						esc_html_e(
-							'All categories',
-							'eventnest'
-						);
-						?>
-					</option>
-
-					<?php foreach ( $cats as $c ) : ?>
-
-						<option
-							value="<?php echo esc_attr( $c->slug ); ?>"
-							<?php selected( $cur_cat, $c->slug ); ?>
-						>
-							<?php echo esc_html( $c->name ); ?>
-						</option>
-
-					<?php endforeach; ?>
-
-				</select>
-
-			<?php endif; ?>
-
-
-			<!-- CITY -->
-
-			<?php if ( $cities ) : ?>
-
-				<select
-					name="event_city"
-					aria-label="<?php esc_attr_e( 'City', 'eventnest' ); ?>"
-				>
-
-					<option value="">
-						<?php
-						esc_html_e(
-							'All cities',
-							'eventnest'
-						);
-						?>
-					</option>
-
-					<?php foreach ( $cities as $c ) : ?>
-
-						<option
-							value="<?php echo esc_attr( $c->slug ); ?>"
-							<?php selected( $cur_city, $c->slug ); ?>
-						>
-							<?php echo esc_html( $c->name ); ?>
-						</option>
-
-					<?php endforeach; ?>
-
-				</select>
-
-			<?php endif; ?>
-
-
-			<!-- DATE RANGE -->
+			<!-- Category -->
 
 			<select
-				name="when"
-				aria-label="<?php esc_attr_e( 'Date range', 'eventnest' ); ?>"
+				name="event_category"
+				aria-label="<?php esc_attr_e( 'Category', 'eventnest' ); ?>"
 			>
 
 				<option value="">
-					<?php
-					esc_html_e(
-						'Any upcoming date',
-						'eventnest'
-					);
-					?>
+					<?php esc_html_e( 'All categories', 'eventnest' ); ?>
+				</option>
+
+				<?php foreach ( $cats as $c ) : ?>
+
+					<option
+						value="<?php echo esc_attr( $c->slug ); ?>"
+						<?php selected( $cur_cat, $c->slug ); ?>
+					>
+						<?php echo esc_html( $c->name ); ?>
+					</option>
+
+				<?php endforeach; ?>
+
+			</select>
+
+
+			<!-- City -->
+
+			<select
+				name="event_city"
+				aria-label="<?php esc_attr_e( 'City', 'eventnest' ); ?>"
+			>
+
+				<option value="">
+					<?php esc_html_e( 'All cities', 'eventnest' ); ?>
+				</option>
+
+				<?php foreach ( $cities as $c ) : ?>
+
+					<option
+						value="<?php echo esc_attr( $c->slug ); ?>"
+						<?php selected( $cur_city, $c->slug ); ?>
+					>
+						<?php echo esc_html( $c->name ); ?>
+					</option>
+
+				<?php endforeach; ?>
+
+			</select>
+
+
+			<!-- Date -->
+
+			<select
+				name="when"
+				aria-label="<?php esc_attr_e( 'When', 'eventnest' ); ?>"
+			>
+
+				<option value="">
+					<?php esc_html_e( 'Any time', 'eventnest' ); ?>
 				</option>
 
 				<option
 					value="week"
-					<?php selected( $when, 'week' ); ?>
+					<?php selected( $cur_when, 'week' ); ?>
 				>
-					<?php
-					esc_html_e(
-						'Next 7 days',
-						'eventnest'
-					);
-					?>
+					This week
 				</option>
 
 				<option
 					value="month"
-					<?php selected( $when, 'month' ); ?>
+					<?php selected( $cur_when, 'month' ); ?>
 				>
-					<?php
-					esc_html_e(
-						'This month',
-						'eventnest'
-					);
-					?>
+					This month
 				</option>
 
 			</select>
 
 
-			<!-- FREE EVENTS -->
+			<!-- Free -->
 
 			<label class="check">
 
@@ -343,50 +241,44 @@ $clear_url = get_post_type_archive_link( 'event' );
 					type="checkbox"
 					name="free"
 					value="1"
-					<?php checked( $free ); ?>
+					<?php checked( $cur_free ); ?>
 				>
 
 				<span>
-					<?php
-					esc_html_e(
-						'Free only',
-						'eventnest'
-					);
-					?>
+					<?php esc_html_e( 'Free only', 'eventnest' ); ?>
 				</span>
 
 			</label>
 
 
-			<!-- SUBMIT -->
+			<!-- Apply -->
 
 			<button
 				class="btn btn--brand btn--sm"
 				type="submit"
 			>
-				<?php
-				esc_html_e(
-					'Show events',
-					'eventnest'
-				);
-				?>
+				<?php esc_html_e( 'Apply filters', 'eventnest' ); ?>
 			</button>
 
 
-			<!-- CLEAR -->
+			<!-- Clear -->
+
+			<?php
+			$has_filters =
+				$cur_search ||
+				$cur_city ||
+				$cur_cat ||
+				$cur_when ||
+				$cur_free;
+			?>
 
 			<?php if ( $has_filters ) : ?>
 
 				<a
 					class="filters__clear"
-					href="<?php echo esc_url( $clear_url ); ?>"
+					href="<?php echo esc_url( get_post_type_archive_link( 'event' ) ); ?>"
 				>
-					<?php
-					esc_html_e(
-						'Clear',
-						'eventnest'
-					);
-					?>
+					Clear
 				</a>
 
 			<?php endif; ?>
@@ -399,69 +291,49 @@ $clear_url = get_post_type_archive_link( 'event' );
 
 
 <!-- =====================================================
-     EVENT RESULTS
-====================================================== -->
+     RESULTS
+     ===================================================== -->
 
-<section class="section section--tight events-results">
+<section class="section section--tight">
 
 	<div class="wrap">
 
 
-		<!-- RESULTS BAR -->
+		<!-- Results bar -->
 
 		<div class="results-bar">
 
-			<?php if ( have_posts() ) : ?>
+			<p class="results-count">
 
-				<p class="results-count">
+				<strong>
+					<?php echo esc_html( $result_count ); ?>
+				</strong>
 
-					<strong>
-						<?php
-						echo esc_html(
-							number_format_i18n(
-								(int) $wp_query->found_posts
-							)
-						);
-						?>
-					</strong>
-
-					<?php
-					echo esc_html(
-						_n(
-							'event',
-							'events',
-							(int) $wp_query->found_posts,
-							'eventnest'
-						)
-					);
-					?>
-
-				</p>
-
-			<?php else : ?>
-
-				<p class="results-count">
-					<?php
-					esc_html_e(
-						'No matching events',
+				<?php
+				echo esc_html(
+					_n(
+						'event found',
+						'events found',
+						$result_count,
 						'eventnest'
-					);
-					?>
-				</p>
+					)
+				);
+				?>
 
-			<?php endif; ?>
+			</p>
 
 
 			<?php if ( $has_filters ) : ?>
 
-				<span class="results-bar__hint">
-					<?php
-					esc_html_e(
-						'Filters are applied to upcoming events.',
-						'eventnest'
-					);
-					?>
-				</span>
+				<p class="results-bar__hint">
+					Showing events matching your filters
+				</p>
+
+			<?php else : ?>
+
+				<p class="results-bar__hint">
+					Upcoming campus events
+				</p>
 
 			<?php endif; ?>
 
@@ -469,8 +341,8 @@ $clear_url = get_post_type_archive_link( 'event' );
 
 
 		<!-- =================================================
-		     EVENT CARDS
-		================================================== -->
+		     EVENT RESULTS
+		     ================================================= -->
 
 		<?php if ( have_posts() ) : ?>
 
@@ -491,40 +363,16 @@ $clear_url = get_post_type_archive_link( 'event' );
 			</div>
 
 
-			<!-- =================================================
-			     PAGINATION
-			================================================== -->
+			<!-- Pagination -->
 
 			<?php
 
-			$pagination_args = array(
-				'mid_size'  => 1,
-				'prev_text' => __( 'Previous', 'eventnest' ),
-				'next_text' => __( 'Next', 'eventnest' ),
-			);
-
-
-			/*
-			 * Preserve active filters while moving
-			 * between pagination pages.
-			 */
-			if ( ! empty( $_GET ) ) {
-
-				$pagination_args['add_args'] = array();
-
-				foreach ( wp_unslash( $_GET ) as $key => $value ) {
-
-					if ( is_array( $value ) ) {
-						continue;
-					}
-
-					$pagination_args['add_args'][ sanitize_key( $key ) ] =
-						sanitize_text_field( $value );
-				}
-			}
-
 			the_posts_pagination(
-				$pagination_args
+				array(
+					'mid_size'  => 1,
+					'prev_text' => __( 'Previous', 'eventnest' ),
+					'next_text' => __( 'Next', 'eventnest' ),
+				)
 			);
 
 			?>
@@ -534,46 +382,29 @@ $clear_url = get_post_type_archive_link( 'event' );
 
 
 			<!-- =================================================
-			     EMPTY STATE
-			================================================== -->
+			     NO RESULTS
+			     ================================================= -->
 
 			<div class="empty empty--events">
 
-				<div
-					class="empty__icon"
-					aria-hidden="true"
-				>
-					✦
+				<div class="empty__icon">
+					⌕
 				</div>
 
 				<h2>
-					<?php
-					esc_html_e(
-						'No upcoming events found',
-						'eventnest'
-					);
-					?>
+					No events found
 				</h2>
 
 				<p>
-					<?php
-					esc_html_e(
-						'Try another category, city or date range. You can also clear the filters to see all upcoming campus events.',
-						'eventnest'
-					);
-					?>
+					We couldn't find any upcoming events matching
+					your selected filters.
 				</p>
 
 				<a
 					class="btn btn--brand"
-					href="<?php echo esc_url( $clear_url ); ?>"
+					href="<?php echo esc_url( get_post_type_archive_link( 'event' ) ); ?>"
 				>
-					<?php
-					esc_html_e(
-						'View all upcoming events',
-						'eventnest'
-					);
-					?>
+					View all events
 				</a>
 
 			</div>

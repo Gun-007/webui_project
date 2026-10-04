@@ -632,3 +632,2277 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 	}
 
 }
+
+/* =========================================================
+   EVENTNEST FILTERED / SEARCH RESULTS - FINAL LAYOUT FIX
+   ---------------------------------------------------------
+   IMPORTANT:
+   - archive-event.php is NOT changed.
+   - The normal Events archive remains unchanged.
+   - This section activates only for:
+       1) Event keyword search results
+       2) An Events archive with an active filter
+   - It fixes the parent layout, results grid, cards and footer
+     placement that caused the narrow one-word-per-line layout.
+   ========================================================= */
+
+/*
+ * Detect an active Events filter without changing PHP.
+ * Modern browsers support :has().
+ */
+@supports selector(body:has(form)) {
+
+	/* =====================================================
+	   ACTIVE FILTER / SEARCH PAGE SCOPE
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) {
+		display: block !important;
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: none !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		overflow-x: hidden !important;
+	}
+
+	/* =====================================================
+	   1. RESET THE OUTER WORDPRESS/THEME LAYOUT
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) #page,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .site {
+
+		display: block !important;
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+
+		margin: 0 !important;
+		padding: 0 !important;
+
+		float: none !important;
+
+		grid-template-columns: none !important;
+		grid-template-areas: none !important;
+	}
+
+	/*
+	 * Reset common wrappers. The broken layout was allowing
+	 * the main content/footer to behave like narrow grid items.
+	 */
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) #content,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .site-content,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .content,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .content-area,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .main-content,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .primary,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) main#main,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) main.site-main {
+
+		display: block !important;
+
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+
+		margin: 0 !important;
+		padding: 0 !important;
+
+		float: none !important;
+		flex: none !important;
+
+		grid-column: 1 / -1 !important;
+	}
+
+	/* =====================================================
+	   2. HEADER AND FOOTER MUST BE FULL WIDTH
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) > .site-header,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) > .site-footer {
+
+		display: block !important;
+
+		width: 100% !important;
+		max-width: none !important;
+
+		margin: 0 !important;
+		float: none !important;
+
+		grid-column: 1 / -1 !important;
+	}
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) > .site-footer {
+
+		margin-top: 3rem !important;
+	}
+
+	/* Footer content stays centered rather than collapsing into a
+	   narrow right-side column. */
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .site-footer__in {
+
+		width: min(1180px, calc(100% - 2.5rem)) !important;
+		max-width: 1180px !important;
+		margin-inline: auto !important;
+	}
+
+	/* =====================================================
+	   3. EVENT ARCHIVE CONTENT WIDTH
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .page-head,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .section {
+
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+
+		float: none !important;
+	}
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .page-head > .wrap,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .section > .wrap {
+
+		width: min(1400px, calc(100% - 3rem)) !important;
+		max-width: 1400px !important;
+		margin-inline: auto !important;
+	}
+
+	/* =====================================================
+	   4. FILTER FORM
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .filters {
+
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+
+		float: none !important;
+	}
+
+	/* =====================================================
+	   5. THE ACTUAL EVENT RESULTS GRID
+	   -----------------------------------------------------
+	   archive-event.php outputs .grid, not
+	   .event-results__grid. This is the key correction.
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .section .grid,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .event-grid {
+
+		display: grid !important;
+
+		grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+
+		gap: 22px !important;
+
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+
+		margin: 0 !important;
+		padding: 0 !important;
+
+		float: none !important;
+
+		align-items: stretch !important;
+	}
+
+	/* =====================================================
+	   6. RESULT CARDS
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .section .grid > .ev-card,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .event-grid > .ev-card {
+
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: none !important;
+
+		margin: 0 !important;
+
+		float: none !important;
+
+		display: flex !important;
+		flex-direction: column !important;
+
+		overflow: hidden !important;
+	}
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .ev-card__media {
+
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .ev-card__body {
+
+		width: 100% !important;
+		min-width: 0 !important;
+
+		display: flex !important;
+		flex-direction: column !important;
+
+		margin: 0 !important;
+
+		overflow: visible !important;
+	}
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .ev-card__title,
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .ev-card__where {
+
+		width: 100% !important;
+		min-width: 0 !important;
+
+		white-space: normal !important;
+		word-break: normal !important;
+		overflow-wrap: break-word !important;
+	}
+
+	/* =====================================================
+	   7. RESULTS BAR / PAGINATION
+	   ===================================================== */
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .results-bar {
+
+		width: 100% !important;
+		max-width: none !important;
+	}
+
+	:is(
+		body.search:has(.filters),
+		body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+		body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+	) .navigation.pagination {
+
+		width: 100% !important;
+		max-width: none !important;
+
+		margin: 2.5rem auto 0 !important;
+
+		float: none !important;
+	}
+
+	/* =====================================================
+	   8. SEARCH-SPECIFIC LAYOUT
+	   -----------------------------------------------------
+	   This keeps keyword search results working even when
+	   the search template uses its own event-search classes.
+	   ===================================================== */
+
+	body.search:has(.filters) .event-archive-page,
+	body.search:has(.filters) .event-results,
+	body.search:has(.filters) .event-results__inner {
+
+		display: block !important;
+
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+
+		margin: 0 !important;
+		float: none !important;
+	}
+
+	body.search:has(.filters) .event-results__inner {
+		width: min(1400px, calc(100% - 3rem)) !important;
+		max-width: 1400px !important;
+		margin-inline: auto !important;
+	}
+
+	body.search:has(.filters) .event-results__grid {
+		display: grid !important;
+
+		grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+
+		gap: 22px !important;
+
+		width: 100% !important;
+		max-width: none !important;
+
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	body.search:has(.filters) .event-results__grid .ev-card {
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	/* =====================================================
+	   9. RESPONSIVE RESULTS GRID
+	   ===================================================== */
+
+	@media (max-width: 1100px) {
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .section .grid,
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .event-grid,
+
+		body.search:has(.filters) .event-results__grid {
+
+			grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+		}
+	}
+
+	@media (max-width: 820px) {
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .section .grid,
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .event-grid,
+
+		body.search:has(.filters) .event-results__grid {
+
+			grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+
+			gap: 16px !important;
+		}
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .page-head > .wrap,
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .section > .wrap,
+
+		body.search:has(.filters) .event-results__inner {
+
+			width: calc(100% - 2rem) !important;
+		}
+	}
+
+	@media (max-width: 560px) {
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .section .grid,
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .event-grid,
+
+		body.search:has(.filters) .event-results__grid {
+
+			grid-template-columns: 1fr !important;
+
+			gap: 16px !important;
+		}
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .page-head > .wrap,
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .section > .wrap,
+
+		body.search:has(.filters) .event-results__inner {
+
+			width: calc(100% - 1.5rem) !important;
+		}
+
+		:is(
+			body.search:has(.filters),
+			body.post-type-archive-event:has(.filters select option:checked:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="search"][value]:not([value=""])),
+			body.post-type-archive-event:has(.filters input[type="checkbox"]:checked)
+		) .results-bar {
+
+			align-items: flex-start !important;
+			flex-direction: column !important;
+			gap: .35rem !important;
+		}
+	}
+}
+/* =========================================================
+   EVENTNEST - FINAL EVENTS / SEARCH LAYOUT FIX
+   =========================================================
+   Fixes:
+   - Search page collapsing into a narrow column
+   - Header/footer appearing beside the content
+   - Event cards appearing vertically
+   - Events search using wrong container width
+   - Events archive grid not expanding
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   1. GLOBAL SEARCH PAGE RESET
+   --------------------------------------------------------- */
+
+body.search {
+	width: 100% !important;
+	min-width: 0 !important;
+	max-width: none !important;
+
+	margin: 0 !important;
+	padding: 0 !important;
+
+	overflow-x: hidden !important;
+
+	background: #07090F !important;
+}
+
+
+/*
+ * The biggest problem in your screenshot is that the
+ * WordPress page wrapper is behaving like a multi-column
+ * layout.
+ */
+body.search #page,
+body.search .site,
+body.search #content,
+body.search .site-content,
+body.search .content,
+body.search .content-area,
+body.search .primary,
+body.search .main-content {
+	display: block !important;
+
+	width: 100% !important;
+	max-width: none !important;
+	min-width: 0 !important;
+
+	margin: 0 !important;
+	padding: 0 !important;
+
+	float: none !important;
+
+	position: relative !important;
+
+	grid-column: 1 / -1 !important;
+	grid-row: auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   2. SEARCH MAIN AREA
+   --------------------------------------------------------- */
+
+body.search main,
+body.search #main,
+body.search main#main,
+body.search .site-main {
+	display: block !important;
+
+	width: 100% !important;
+	max-width: none !important;
+	min-width: 0 !important;
+
+	margin: 0 !important;
+	padding: 0 !important;
+
+	float: none !important;
+
+	position: relative !important;
+
+	grid-column: 1 / -1 !important;
+}
+
+
+/* ---------------------------------------------------------
+   3. HEADER MUST OCCUPY FULL WIDTH
+   --------------------------------------------------------- */
+
+body.search .site-header,
+body.search header.site-header {
+	display: block !important;
+
+	width: 100% !important;
+	max-width: none !important;
+
+	margin: 0 !important;
+
+	float: none !important;
+
+	grid-column: 1 / -1 !important;
+	grid-row: auto !important;
+}
+
+
+body.search .site-header__in {
+	width: min(1180px, calc(100% - 2.5rem)) !important;
+
+	max-width: 1180px !important;
+
+	margin-inline: auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   4. HIDE ACCIDENTAL DUPLICATE HEADER INSIDE MAIN
+   --------------------------------------------------------- */
+
+body.search #main .site-header,
+body.search #main header.site-header {
+	display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   5. FOOTER MUST COME BELOW CONTENT
+   --------------------------------------------------------- */
+
+body.search .site-footer,
+body.search footer.site-footer {
+	display: block !important;
+
+	width: 100% !important;
+	max-width: none !important;
+
+	margin: 3rem 0 0 !important;
+
+	float: none !important;
+
+	clear: both !important;
+
+	grid-column: 1 / -1 !important;
+	grid-row: auto !important;
+}
+
+
+body.search .site-footer__in {
+	width: min(1180px, calc(100% - 2.5rem)) !important;
+
+	max-width: 1180px !important;
+
+	margin-inline: auto !important;
+}
+
+
+/*
+ * If the footer was accidentally inserted inside #main,
+ * hide that copy. The real footer remains visible.
+ */
+body.search #main .site-footer,
+body.search #main footer.site-footer {
+	display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   6. EVENTS SEARCH PAGE
+   --------------------------------------------------------- */
+
+body.search .page-head {
+	display: block !important;
+
+	width: 100% !important;
+
+	margin: 0 !important;
+
+	padding:
+		clamp(3rem, 7vw, 5.2rem)
+		0
+		2rem !important;
+
+	background:
+		radial-gradient(
+			ellipse at 88% 10%,
+			rgba(255, 40, 81, .12),
+			transparent 38%
+		),
+		#0A0D14 !important;
+
+	border-bottom: 1px solid #202633 !important;
+
+	float: none !important;
+}
+
+
+body.search .page-head > .wrap {
+	display: block !important;
+
+	width: min(1180px, calc(100% - 2.5rem)) !important;
+
+	max-width: 1180px !important;
+
+	margin-inline: auto !important;
+
+	padding: 0 !important;
+
+	float: none !important;
+}
+
+
+/* Search title */
+
+body.search .page-head h1 {
+	display: block !important;
+
+	width: 100% !important;
+	max-width: 100% !important;
+
+	margin: 0 !important;
+
+	font-family: var(--font-display) !important;
+
+	font-size:
+		clamp(2.8rem, 6vw, 4.6rem) !important;
+
+	font-weight: 800 !important;
+
+	line-height: .95 !important;
+
+	letter-spacing: -.06em !important;
+
+	color: #F5F7FB !important;
+
+	white-space: normal !important;
+
+	word-break: normal !important;
+}
+
+
+/* ---------------------------------------------------------
+   7. EVENTS FILTER FORM
+   --------------------------------------------------------- */
+
+body.search .filters {
+	display: grid !important;
+
+	grid-template-columns:
+		minmax(240px, 1.8fr)
+		minmax(150px, 1fr)
+		minmax(150px, 1fr)
+		auto
+		auto !important;
+
+	gap: .65rem !important;
+
+	align-items: center !important;
+
+	width: 100% !important;
+	max-width: none !important;
+
+	margin-top: 1.8rem !important;
+
+	padding: .7rem !important;
+
+	background: #10141D !important;
+
+	border: 1px solid #282F3D !important;
+
+	border-radius: 15px !important;
+
+	box-shadow:
+		0 18px 50px rgba(0, 0, 0, .18) !important;
+}
+
+
+body.search .filters input[type="search"],
+body.search .filters select {
+	display: block !important;
+
+	width: 100% !important;
+	min-width: 0 !important;
+
+	min-height: 46px !important;
+
+	padding: .7rem .85rem !important;
+
+	background: #080C13 !important;
+
+	border: 1px solid #2B3341 !important;
+
+	border-radius: 9px !important;
+
+	color: #F4F5F8 !important;
+
+	font: 500 .95rem var(--font-body) !important;
+
+	outline: none !important;
+}
+
+
+body.search .filters input[type="search"]::placeholder {
+	color: #8C95A5 !important;
+}
+
+
+body.search .filters .check {
+	display: inline-flex !important;
+
+	align-items: center !important;
+
+	justify-content: center !important;
+
+	gap: .4rem !important;
+
+	padding: 0 .4rem !important;
+
+	color: #CCD1DA !important;
+
+	font-size: .85rem !important;
+
+	white-space: nowrap !important;
+}
+
+
+body.search .filters .check input {
+	accent-color: #FF2851 !important;
+}
+
+
+body.search .filters .btn {
+	min-height: 44px !important;
+
+	white-space: nowrap !important;
+
+	border-radius: 9px !important;
+}
+
+
+/* ---------------------------------------------------------
+   8. RESULTS SECTION
+   --------------------------------------------------------- */
+
+body.search .section {
+	display: block !important;
+
+	width: 100% !important;
+
+	margin: 0 !important;
+
+	float: none !important;
+
+	clear: both !important;
+}
+
+
+body.search .section > .wrap {
+	display: block !important;
+
+	width: min(1180px, calc(100% - 2.5rem)) !important;
+
+	max-width: 1180px !important;
+
+	margin-inline: auto !important;
+
+	padding: 0 !important;
+
+	float: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   9. EVENT GRID
+   --------------------------------------------------------- */
+
+body.search .section .grid,
+body.search .event-grid,
+body.search .event-results__grid {
+	display: grid !important;
+
+	grid-template-columns:
+		repeat(4, minmax(0, 1fr)) !important;
+
+	gap: 1.4rem !important;
+
+	width: 100% !important;
+
+	max-width: none !important;
+
+	margin: 0 !important;
+
+	padding: 0 !important;
+
+	float: none !important;
+
+	position: relative !important;
+}
+
+
+/* ---------------------------------------------------------
+   10. EVENT CARD
+   --------------------------------------------------------- */
+
+body.search .section .grid .ev-card,
+body.search .event-grid .ev-card,
+body.search .event-results__grid .ev-card {
+	display: flex !important;
+
+	flex-direction: column !important;
+
+	width: 100% !important;
+
+	min-width: 0 !important;
+
+	max-width: none !important;
+
+	margin: 0 !important;
+
+	padding: 0 !important;
+
+	float: none !important;
+
+	position: relative !important;
+
+	background: #10141D !important;
+
+	border: 1px solid #242B38 !important;
+
+	border-radius: 20px !important;
+
+	overflow: hidden !important;
+}
+
+
+/* Card image */
+
+body.search .ev-card__media {
+	display: block !important;
+
+	width: 100% !important;
+
+	min-width: 0 !important;
+
+	aspect-ratio: 3 / 2 !important;
+
+	position: relative !important;
+
+	overflow: hidden !important;
+}
+
+
+body.search .ev-card__media img {
+	width: 100% !important;
+
+	height: 100% !important;
+
+	object-fit: cover !important;
+}
+
+
+/* Card body */
+
+body.search .ev-card__body {
+	display: flex !important;
+
+	flex-direction: column !important;
+
+	width: 100% !important;
+
+	min-width: 0 !important;
+
+	flex: 1 !important;
+
+	padding: 1.2rem !important;
+
+	position: relative !important;
+}
+
+
+body.search .ev-card__title {
+	width: 100% !important;
+
+	max-width: none !important;
+
+	margin: 0 !important;
+
+	font-size: 1.2rem !important;
+
+	line-height: 1.15 !important;
+
+	white-space: normal !important;
+
+	word-break: normal !important;
+
+	overflow-wrap: break-word !important;
+}
+
+
+body.search .ev-card__title a {
+	display: block !important;
+
+	width: 100% !important;
+
+	white-space: normal !important;
+
+	word-break: normal !important;
+}
+
+
+body.search .ev-card__where {
+	width: 100% !important;
+
+	margin: .4rem 0 0 !important;
+
+	color: #A0A8B8 !important;
+
+	white-space: normal !important;
+
+	word-break: normal !important;
+
+	overflow-wrap: break-word !important;
+}
+
+
+body.search .ev-card__foot {
+	width: 100% !important;
+
+	margin-top: auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   11. RESULTS BAR / PAGINATION
+   --------------------------------------------------------- */
+
+body.search .results-bar {
+	display: flex !important;
+
+	width: 100% !important;
+
+	align-items: center !important;
+
+	justify-content: space-between !important;
+
+	margin-bottom: 1rem !important;
+}
+
+
+body.search .navigation.pagination {
+	display: block !important;
+
+	width: 100% !important;
+
+	margin: 2.5rem auto 0 !important;
+
+	float: none !important;
+
+	clear: both !important;
+}
+
+
+body.search .nav-links {
+	display: flex !important;
+
+	width: 100% !important;
+
+	justify-content: center !important;
+
+	flex-wrap: wrap !important;
+}
+
+
+/* ---------------------------------------------------------
+   12. NORMAL EVENT ARCHIVE TOO
+   --------------------------------------------------------- */
+
+body.post-type-archive-event #page,
+body.post-type-archive-event .site,
+body.post-type-archive-event #content,
+body.post-type-archive-event .site-content,
+body.post-type-archive-event main,
+body.post-type-archive-event #main,
+body.post-type-archive-event .site-main {
+	display: block !important;
+
+	width: 100% !important;
+
+	max-width: none !important;
+
+	margin: 0 !important;
+
+	padding: 0 !important;
+
+	float: none !important;
+
+	grid-column: 1 / -1 !important;
+}
+
+
+body.post-type-archive-event .page-head,
+body.post-type-archive-event .section {
+	width: 100% !important;
+
+	float: none !important;
+
+	clear: both !important;
+}
+
+
+body.post-type-archive-event .page-head > .wrap,
+body.post-type-archive-event .section > .wrap {
+	width: min(1180px, calc(100% - 2.5rem)) !important;
+
+	max-width: 1180px !important;
+
+	margin-inline: auto !important;
+}
+
+
+body.post-type-archive-event .section .grid {
+	display: grid !important;
+
+	grid-template-columns:
+		repeat(4, minmax(0, 1fr)) !important;
+
+	gap: 1.4rem !important;
+
+	width: 100% !important;
+}
+
+
+/* ---------------------------------------------------------
+   13. RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+
+	body.search .section .grid,
+	body.search .event-grid,
+	body.search .event-results__grid,
+	body.post-type-archive-event .section .grid {
+
+		grid-template-columns:
+			repeat(3, minmax(0, 1fr)) !important;
+	}
+
+}
+
+
+@media (max-width: 820px) {
+
+	body.search .section .grid,
+	body.search .event-grid,
+	body.search .event-results__grid,
+	body.post-type-archive-event .section .grid {
+
+		grid-template-columns:
+			repeat(2, minmax(0, 1fr)) !important;
+
+		gap: 1rem !important;
+	}
+
+
+	body.search .filters {
+		grid-template-columns:
+			1fr 1fr !important;
+	}
+
+
+	body.search .filters input[type="search"] {
+		grid-column: 1 / -1 !important;
+	}
+
+
+	body.search .filters .check {
+		justify-content: flex-start !important;
+	}
+
+
+	body.search .filters .btn {
+		width: 100% !important;
+	}
+
+
+	body.search .page-head > .wrap,
+	body.search .section > .wrap,
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap {
+
+		width: calc(100% - 2rem) !important;
+	}
+
+}
+
+
+@media (max-width: 560px) {
+
+	body.search .section .grid,
+	body.search .event-grid,
+	body.search .event-results__grid,
+	body.post-type-archive-event .section .grid {
+
+		grid-template-columns: 1fr !important;
+	}
+
+
+	body.search .filters {
+		grid-template-columns: 1fr !important;
+	}
+
+
+	body.search .filters input[type="search"],
+	body.search .filters .check,
+	body.search .filters .btn {
+		grid-column: auto !important;
+	}
+
+
+	body.search .page-head > .wrap,
+	body.search .section > .wrap,
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap {
+
+		width: calc(100% - 1.5rem) !important;
+	}
+
+}
+/* =========================================================
+   EVENTNEST - FILTER PANEL FINAL POLISH
+   ========================================================= */
+
+/* Main filter panel */
+.filters--events,
+.filters {
+	display: grid !important;
+
+	grid-template-columns:
+		minmax(300px, 1.7fr)
+		minmax(170px, 1fr)
+		minmax(170px, 1fr)
+		minmax(120px, .7fr)
+		auto
+		minmax(120px, auto) !important;
+
+	align-items: center !important;
+
+	gap: 10px !important;
+
+	width: 100% !important;
+
+	margin: 0 !important;
+
+	padding: 14px !important;
+
+	box-sizing: border-box !important;
+
+	background: #10141d !important;
+
+	border: 1px solid #293241 !important;
+
+	border-radius: 16px !important;
+}
+
+
+/* ---------------------------------------------------------
+   SEARCH INPUT
+   --------------------------------------------------------- */
+
+.filters--events input[type="search"],
+.filters input[type="search"] {
+	grid-column: auto !important;
+
+	width: 100% !important;
+
+	height: 50px !important;
+
+	min-height: 50px !important;
+
+	box-sizing: border-box !important;
+
+	padding: 0 15px !important;
+
+	background: #080c13 !important;
+
+	border: 1px solid #30394a !important;
+
+	border-radius: 10px !important;
+
+	color: #f5f7fb !important;
+
+	font-size: 15px !important;
+
+	outline: none !important;
+}
+
+
+.filters--events input[type="search"]:focus,
+.filters input[type="search"]:focus {
+	border-color: #ff2851 !important;
+
+	box-shadow: 0 0 0 2px rgba(255, 40, 81, .12) !important;
+}
+
+
+.filters--events input[type="search"]::placeholder,
+.filters input[type="search"]::placeholder {
+	color: #8993a5 !important;
+}
+
+
+/* ---------------------------------------------------------
+   SELECT BOXES
+   --------------------------------------------------------- */
+
+.filters--events select,
+.filters select {
+	width: 100% !important;
+
+	height: 50px !important;
+
+	min-height: 50px !important;
+
+	box-sizing: border-box !important;
+
+	padding: 0 38px 0 15px !important;
+
+	background-color: #080c13 !important;
+
+	border: 1px solid #30394a !important;
+
+	border-radius: 10px !important;
+
+	color: #f5f7fb !important;
+
+	font-size: 15px !important;
+
+	outline: none !important;
+
+	cursor: pointer !important;
+}
+
+
+.filters--events select:focus,
+.filters select:focus {
+	border-color: #ff2851 !important;
+
+	box-shadow: 0 0 0 2px rgba(255, 40, 81, .12) !important;
+}
+
+
+/* ---------------------------------------------------------
+   FREE ONLY CHECKBOX
+   --------------------------------------------------------- */
+
+.filters--events .check,
+.filters .check {
+	display: flex !important;
+
+	align-items: center !important;
+
+	justify-content: center !important;
+
+	gap: 8px !important;
+
+	height: 50px !important;
+
+	padding: 0 8px !important;
+
+	margin: 0 !important;
+
+	color: #d7dce5 !important;
+
+	font-size: 14px !important;
+
+	white-space: nowrap !important;
+}
+
+
+.filters--events .check input,
+.filters .check input {
+	width: 16px !important;
+
+	height: 16px !important;
+
+	margin: 0 !important;
+
+	accent-color: #ff2851 !important;
+
+	cursor: pointer !important;
+}
+
+
+/* ---------------------------------------------------------
+   APPLY BUTTON
+   --------------------------------------------------------- */
+
+.filters--events .btn,
+.filters .btn,
+.filters--events button[type="submit"],
+.filters button[type="submit"] {
+	width: 100% !important;
+
+	height: 50px !important;
+
+	min-height: 50px !important;
+
+	margin: 0 !important;
+
+	padding: 0 22px !important;
+
+	box-sizing: border-box !important;
+
+	background: #ff2851 !important;
+
+	border: 1px solid #ff2851 !important;
+
+	border-radius: 10px !important;
+
+	color: #ffffff !important;
+
+	font-size: 15px !important;
+
+	font-weight: 700 !important;
+
+	cursor: pointer !important;
+
+	white-space: nowrap !important;
+
+	transition:
+		background .2s ease,
+		transform .2s ease,
+		box-shadow .2s ease !important;
+}
+
+
+.filters--events .btn:hover,
+.filters .btn:hover,
+.filters--events button[type="submit"]:hover,
+.filters button[type="submit"]:hover {
+	background: #ff4164 !important;
+
+	box-shadow: 0 8px 25px rgba(255, 40, 81, .2) !important;
+
+	transform: translateY(-1px) !important;
+}
+
+
+/* ---------------------------------------------------------
+   CLEAR LINK
+   --------------------------------------------------------- */
+
+.filters--events a,
+.filters a {
+	white-space: nowrap !important;
+}
+
+
+.filters--events .clear,
+.filters .clear {
+	display: inline-flex !important;
+
+	align-items: center !important;
+
+	justify-content: center !important;
+
+	height: 50px !important;
+
+	padding: 0 12px !important;
+
+	color: #aeb7c7 !important;
+
+	font-size: 14px !important;
+
+	text-decoration: none !important;
+
+	white-space: nowrap !important;
+}
+
+
+.filters--events .clear:hover,
+.filters .clear:hover {
+	color: #ffffff !important;
+}
+
+
+/* ---------------------------------------------------------
+   REMOVE UNNECESSARY LABEL / WRAPPER SPACING
+   --------------------------------------------------------- */
+
+.filters--events p,
+.filters p {
+	margin: 0 !important;
+}
+
+
+.filters--events label,
+.filters label {
+	margin: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   TABLET
+   --------------------------------------------------------- */
+
+@media (max-width: 1050px) {
+
+	.filters--events,
+	.filters {
+		grid-template-columns:
+			minmax(240px, 1.5fr)
+			minmax(150px, 1fr)
+			minmax(150px, 1fr)
+			auto !important;
+	}
+
+	.filters--events input[type="search"],
+	.filters input[type="search"] {
+		grid-column: 1 / -1 !important;
+	}
+
+}
+
+
+/* ---------------------------------------------------------
+   MOBILE
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+	.filters--events,
+	.filters {
+		grid-template-columns: 1fr !important;
+
+		gap: 10px !important;
+
+		padding: 12px !important;
+	}
+
+
+	.filters--events input[type="search"],
+	.filters input[type="search"] {
+		grid-column: auto !important;
+	}
+
+
+	.filters--events .check,
+	.filters .check {
+		justify-content: flex-start !important;
+
+		padding-left: 2px !important;
+	}
+
+
+	.filters--events .btn,
+	.filters .btn,
+	.filters--events button[type="submit"],
+	.filters button[type="submit"] {
+		width: 100% !important;
+	}
+
+
+	.filters--events .clear,
+	.filters .clear {
+		justify-content: flex-start !important;
+
+		padding-left: 2px !important;
+	}
+
+}
+/* =========================================================
+   EVENTNEST EVENTS ARCHIVE
+   FINAL CONSISTENT WIDTH FIX
+   Applies to /events/ with OR without filters
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   EVENTS PAGE MAIN WIDTH
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .page-head,
+body.post-type-archive-event .section {
+	width: 100% !important;
+	box-sizing: border-box !important;
+}
+
+
+/* Make the content consistently wide */
+body.post-type-archive-event .page-head > .wrap,
+body.post-type-archive-event .section > .wrap,
+body.post-type-archive-event .page-head .wrap,
+body.post-type-archive-event .section .wrap {
+	width: calc(100% - 136px) !important;
+
+	max-width: 1550px !important;
+
+	margin-left: auto !important;
+	margin-right: auto !important;
+
+	box-sizing: border-box !important;
+}
+
+
+/* ---------------------------------------------------------
+   EVENTS HERO / PAGE HEADER
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .page-head {
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+
+/* Keep heading aligned with filter and cards */
+body.post-type-archive-event .page-head .wrap {
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   FILTER BAR
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters {
+	width: 100% !important;
+
+	box-sizing: border-box !important;
+
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   RESULTS SECTION
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .section {
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+
+body.post-type-archive-event .section .wrap {
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   RESULTS BAR
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .results-bar {
+	width: 100% !important;
+
+	box-sizing: border-box !important;
+
+	display: flex !important;
+
+	align-items: center !important;
+
+	justify-content: space-between !important;
+
+	gap: 20px !important;
+}
+
+
+/* ---------------------------------------------------------
+   EVENT GRID
+   --------------------------------------------------------- */
+
+/* This is the important part.
+   The grid remains the same size whether a filter
+   is selected or not. */
+
+body.post-type-archive-event .section .grid,
+body.post-type-archive-event .event-grid,
+body.post-type-archive-event .event-results__grid {
+	width: 100% !important;
+
+	display: grid !important;
+
+	grid-template-columns:
+		repeat(4, minmax(0, 1fr)) !important;
+
+	gap: 24px !important;
+
+	box-sizing: border-box !important;
+}
+
+
+/* ---------------------------------------------------------
+   EVENT CARDS
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .ev-card {
+	width: 100% !important;
+
+	min-width: 0 !important;
+
+	box-sizing: border-box !important;
+}
+
+
+body.post-type-archive-event .ev-card__media {
+	width: 100% !important;
+
+	box-sizing: border-box !important;
+
+	overflow: hidden !important;
+}
+
+
+body.post-type-archive-event .ev-card__media img {
+	display: block !important;
+
+	width: 100% !important;
+
+	height: 100% !important;
+
+	object-fit: cover !important;
+}
+
+
+body.post-type-archive-event .ev-card__body {
+	width: 100% !important;
+
+	box-sizing: border-box !important;
+}
+
+
+/* ---------------------------------------------------------
+   CARD TITLE
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .ev-card__title {
+	width: 100% !important;
+
+	box-sizing: border-box !important;
+
+	overflow-wrap: normal !important;
+
+	word-break: normal !important;
+}
+
+
+/* ---------------------------------------------------------
+   DESKTOP LARGE
+   --------------------------------------------------------- */
+
+@media (min-width: 1400px) {
+
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap,
+	body.post-type-archive-event .page-head .wrap,
+	body.post-type-archive-event .section .wrap {
+		width: calc(100% - 136px) !important;
+
+		max-width: 1550px !important;
+	}
+
+
+	body.post-type-archive-event .section .grid,
+	body.post-type-archive-event .event-grid,
+	body.post-type-archive-event .event-results__grid {
+		grid-template-columns:
+			repeat(4, minmax(0, 1fr)) !important;
+
+		gap: 24px !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   NORMAL DESKTOP
+   --------------------------------------------------------- */
+
+@media (max-width: 1399px) and (min-width: 1101px) {
+
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap,
+	body.post-type-archive-event .page-head .wrap,
+	body.post-type-archive-event .section .wrap {
+		width: calc(100% - 80px) !important;
+
+		max-width: 1350px !important;
+	}
+
+
+	body.post-type-archive-event .section .grid,
+	body.post-type-archive-event .event-grid,
+	body.post-type-archive-event .event-results__grid {
+		grid-template-columns:
+			repeat(4, minmax(0, 1fr)) !important;
+
+		gap: 20px !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   TABLET
+   --------------------------------------------------------- */
+
+@media (max-width: 1100px) and (min-width: 821px) {
+
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap,
+	body.post-type-archive-event .page-head .wrap,
+	body.post-type-archive-event .section .wrap {
+		width: calc(100% - 48px) !important;
+
+		max-width: none !important;
+	}
+
+
+	body.post-type-archive-event .section .grid,
+	body.post-type-archive-event .event-grid,
+	body.post-type-archive-event .event-results__grid {
+		grid-template-columns:
+			repeat(3, minmax(0, 1fr)) !important;
+
+		gap: 18px !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   SMALL TABLET
+   --------------------------------------------------------- */
+
+@media (max-width: 820px) and (min-width: 601px) {
+
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap,
+	body.post-type-archive-event .page-head .wrap,
+	body.post-type-archive-event .section .wrap {
+		width: calc(100% - 36px) !important;
+
+		max-width: none !important;
+	}
+
+
+	body.post-type-archive-event .section .grid,
+	body.post-type-archive-event .event-grid,
+	body.post-type-archive-event .event-results__grid {
+		grid-template-columns:
+			repeat(2, minmax(0, 1fr)) !important;
+
+		gap: 16px !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   MOBILE
+   --------------------------------------------------------- */
+
+@media (max-width: 600px) {
+
+	body.post-type-archive-event .page-head > .wrap,
+	body.post-type-archive-event .section > .wrap,
+	body.post-type-archive-event .page-head .wrap,
+	body.post-type-archive-event .section .wrap {
+		width: calc(100% - 28px) !important;
+
+		max-width: none !important;
+	}
+
+
+	body.post-type-archive-event .section .grid,
+	body.post-type-archive-event .event-grid,
+	body.post-type-archive-event .event-results__grid {
+		grid-template-columns:
+			1fr !important;
+
+		gap: 16px !important;
+	}
+
+
+	body.post-type-archive-event .results-bar {
+		flex-direction: column !important;
+
+		align-items: flex-start !important;
+	}
+}
+/* =========================================================
+   EVENTNEST FILTER BAR
+   FINAL ONE-ROW DESKTOP FIX
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   MAIN FILTER CONTAINER
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters {
+	width: 100% !important;
+	box-sizing: border-box !important;
+
+	display: grid !important;
+
+	grid-template-columns:
+		minmax(260px, 1.6fr)
+		minmax(180px, 1fr)
+		minmax(180px, 1fr)
+		minmax(135px, 0.7fr)
+		auto
+		auto
+		auto !important;
+
+	align-items: center !important;
+
+	gap: 12px !important;
+
+	padding: 12px !important;
+
+	margin: 0 !important;
+
+	border-radius: 16px !important;
+
+	overflow: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   HIDDEN INPUTS MUST NOT TAKE GRID SPACE
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters input[type="hidden"] {
+	display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   SEARCH INPUT
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters input[type="search"],
+body.post-type-archive-event .filters input[type="text"] {
+	width: 100% !important;
+
+	min-width: 0 !important;
+
+	height: 58px !important;
+
+	box-sizing: border-box !important;
+
+	margin: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   SELECT BOXES
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters select {
+	width: 100% !important;
+
+	min-width: 0 !important;
+
+	height: 58px !important;
+
+	box-sizing: border-box !important;
+
+	margin: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   FREE ONLY CHECKBOX
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters label {
+	width: auto !important;
+
+	min-width: max-content !important;
+
+	display: flex !important;
+
+	align-items: center !important;
+
+	justify-content: center !important;
+
+	gap: 8px !important;
+
+	margin: 0 !important;
+
+	padding: 0 4px !important;
+
+	white-space: nowrap !important;
+}
+
+
+body.post-type-archive-event .filters label input[type="checkbox"] {
+	width: 18px !important;
+
+	height: 18px !important;
+
+	margin: 0 !important;
+
+	flex: 0 0 auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   APPLY FILTERS BUTTON
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters button,
+body.post-type-archive-event .filters input[type="submit"],
+body.post-type-archive-event .filters .button {
+	width: auto !important;
+
+	min-width: 150px !important;
+
+	height: 58px !important;
+
+	box-sizing: border-box !important;
+
+	margin: 0 !important;
+
+	white-space: nowrap !important;
+
+	flex: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   CLEAR LINK
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters a {
+	white-space: nowrap !important;
+
+	margin: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   PREVENT CHILD ELEMENTS FROM CREATING EXTRA ROWS
+   --------------------------------------------------------- */
+
+body.post-type-archive-event .filters > * {
+	min-width: 0 !important;
+
+	box-sizing: border-box !important;
+}
+
+
+/* ---------------------------------------------------------
+   SEARCH FILTER STATE
+   IMPORTANT:
+   Keep EXACTLY the same one-row layout when searching.
+   --------------------------------------------------------- */
+
+body.search .filters,
+body.post-type-archive-event .filters {
+	grid-auto-flow: column !important;
+}
+
+
+/* ---------------------------------------------------------
+   DESKTOP
+   --------------------------------------------------------- */
+
+@media (min-width: 1101px) {
+
+	body.post-type-archive-event .filters {
+		grid-template-columns:
+			minmax(260px, 1.6fr)
+			minmax(180px, 1fr)
+			minmax(180px, 1fr)
+			minmax(135px, 0.7fr)
+			auto
+			auto
+			auto !important;
+
+		align-items: center !important;
+	}
+
+	body.post-type-archive-event .filters button,
+	body.post-type-archive-event .filters input[type="submit"] {
+		grid-column: auto !important;
+		grid-row: auto !important;
+	}
+
+	body.post-type-archive-event .filters a {
+		grid-column: auto !important;
+		grid-row: auto !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   MEDIUM DESKTOP
+   --------------------------------------------------------- */
+
+@media (max-width: 1250px) and (min-width: 1001px) {
+
+	body.post-type-archive-event .filters {
+		grid-template-columns:
+			minmax(220px, 1.5fr)
+			minmax(160px, 1fr)
+			minmax(160px, 1fr)
+			minmax(120px, 0.7fr)
+			auto
+			auto
+			auto !important;
+
+		gap: 10px !important;
+	}
+
+	body.post-type-archive-event .filters button,
+	body.post-type-archive-event .filters input[type="submit"] {
+		min-width: 130px !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   TABLET
+   --------------------------------------------------------- */
+
+@media (max-width: 1000px) and (min-width: 701px) {
+
+	body.post-type-archive-event .filters {
+		grid-template-columns:
+			minmax(200px, 1.5fr)
+			minmax(150px, 1fr)
+			minmax(150px, 1fr)
+			minmax(120px, 0.8fr) !important;
+
+		gap: 10px !important;
+	}
+
+	body.post-type-archive-event .filters label {
+		grid-column: span 1 !important;
+		justify-content: flex-start !important;
+	}
+
+	body.post-type-archive-event .filters button,
+	body.post-type-archive-event .filters input[type="submit"] {
+		grid-column: span 1 !important;
+
+		width: 100% !important;
+	}
+}
+
+
+/* ---------------------------------------------------------
+   MOBILE
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+	body.post-type-archive-event .filters {
+		display: grid !important;
+
+		grid-template-columns: 1fr !important;
+
+		gap: 10px !important;
+
+		padding: 12px !important;
+	}
+
+	body.post-type-archive-event .filters > * {
+		width: 100% !important;
+
+		grid-column: 1 !important;
+	}
+
+	body.post-type-archive-event .filters input[type="search"],
+	body.post-type-archive-event .filters input[type="text"],
+	body.post-type-archive-event .filters select,
+	body.post-type-archive-event .filters button,
+	body.post-type-archive-event .filters input[type="submit"] {
+		width: 100% !important;
+
+		height: 52px !important;
+	}
+
+	body.post-type-archive-event .filters label {
+		justify-content: flex-start !important;
+
+		height: 40px !important;
+	}
+}
