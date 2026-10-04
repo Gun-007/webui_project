@@ -17,6 +17,7 @@ while ( have_posts() ) : the_post();
 	$registration_closed = $deadline && $deadline < current_time( 'Y-m-d' );
 	$cancelled = get_post_meta( $id, '_en_cancelled', true );
 	$registered_count = function_exists( 'enc_registration_count' ) ? enc_registration_count( $id ) : 0;
+	$eventnest_registration_state = function_exists( 'enc_event_state' ) ? enc_event_state( $id ) : 'registration_open';
 	$is_full = $max_participants && $registered_count >= (int) $max_participants;
 	$map   = trim( $d['venue'] . ' ' . $addr . ' ' . $d['city'] );
 ?>
@@ -72,6 +73,7 @@ while ( have_posts() ) : the_post();
 			<aside class="event__aside">
 				<div class="ticket-box">
 					<p class="ticket-box__price"><?php echo esc_html( $d['price'] ); ?></p>
+					<?php if ( function_exists( 'enc_student_notice' ) && isset( $_GET['en_registration'] ) ) echo enc_student_notice( sanitize_key( wp_unslash( $_GET['en_registration'] ) ) ); ?>
 					<?php if ( $cancelled ) : ?>
 						<p class="ticket-box__note ticket-box__note--alert"><?php esc_html_e( 'This event has been cancelled.', 'eventnest' ); ?></p>
 					<?php elseif ( $past ) : ?>
@@ -80,6 +82,18 @@ while ( have_posts() ) : the_post();
 					<?php elseif ( $registration_closed || $is_full ) : ?>
 						<?php if ( $is_full ) : ?><p class="ticket-box__note"><?php esc_html_e( 'This event has reached its participant limit.', 'eventnest' ); ?></p><?php else : ?>
 						<p class="ticket-box__note"><?php esc_html_e( 'Registration for this event has closed.', 'eventnest' ); ?></p>
+						<?php endif; ?>
+					<?php elseif ( function_exists( 'enc_register' ) ) : ?>
+						<?php if ( is_user_logged_in() && enc_is_registered( $id, get_current_user_id() ) ) : ?>
+							<p class="ticket-box__note">You are registered for this event.</p><a class="btn btn--ghost btn--block" href="<?php echo esc_url( home_url( '/my-registrations/' ) ); ?>">View my registrations</a>
+						<?php elseif ( $eventnest_registration_state !== 'registration_open' ) : ?>
+							<p class="ticket-box__note">Registration is not open for this event.</p>
+						<?php elseif ( ! is_user_logged_in() ) : ?>
+							<a class="btn btn--brand btn--block" href="<?php echo esc_url( add_query_arg( 'redirect_to', $url, home_url( '/login/' ) ) ); ?>">Log in to register</a>
+						<?php elseif ( current_user_can( 'en_register_event' ) ) : ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="enc_register_event"><input type="hidden" name="event_id" value="<?php echo esc_attr( $id ); ?>"><?php echo wp_nonce_field( 'enc_register_event_' . $id, 'enc_registration_nonce', true, false ); ?><button class="btn btn--brand btn--block" type="submit"><?php echo $d['price'] === __( 'Free', 'eventnest' ) ? esc_html__( 'Register for free', 'eventnest' ) : esc_html__( 'Register now', 'eventnest' ); ?></button></form>
+						<?php else : ?>
+							<p class="ticket-box__note">A student account is required to register.</p>
 						<?php endif; ?>
 					<?php elseif ( $tix ) : ?>
 						<a class="btn btn--brand btn--block" href="<?php echo esc_url( $tix ); ?>" target="_blank" rel="noopener"><?php echo $d['price'] === __( 'Free', 'eventnest' ) ? esc_html__( 'Register for free', 'eventnest' ) : esc_html__( 'Get tickets', 'eventnest' ); ?></a>

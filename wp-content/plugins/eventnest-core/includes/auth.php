@@ -80,7 +80,9 @@ add_action( 'init', function () {
 		}
 		$user = wp_signon( array( 'user_login' => $username, 'user_password' => $password, 'remember' => ! empty( $_POST['remember'] ) ), is_ssl() );
 		if ( is_wp_error( $user ) ) enc_auth_redirect( 'login', 'login_failed' );
-		enc_auth_redirect( 'dashboard', 'welcome' );
+		$requested = isset( $_POST['redirect_to'] ) ? wp_unslash( $_POST['redirect_to'] ) : home_url( '/dashboard/' );
+		wp_safe_redirect( wp_validate_redirect( $requested, home_url( '/dashboard/' ) ) );
+		exit;
 	}
 
 	$is_student = $action === 'student_register';
@@ -193,7 +195,8 @@ function enc_login_shortcode() {
 	if ( is_user_logged_in() ) return '<section class="en-auth-card"><h1>You are logged in</h1><p><a class="btn btn--brand" href="' . esc_url( home_url( '/dashboard/' ) ) . '">Open dashboard</a></p></section>';
 	$out = '<section class="en-auth-card"><p class="eyebrow eyebrow--small">EVENTNEST ACCOUNT</p><h1>Welcome back</h1><p class="muted">Log in with your username, email or student PRN.</p>' . enc_auth_message( enc_auth_form_result( 'en_result' ) );
 	$out .= enc_auth_form_start( 'login' ) . enc_auth_field( 'identity', 'Username, email or PRN', 'text', true, 'username' ) . enc_auth_field( 'password', 'Password', 'password', true, 'current-password' );
-	$out .= '<label class="en-auth__check"><input type="checkbox" name="remember" value="1"> Remember me</label><button class="btn btn--brand btn--block" type="submit">Log in</button></form><p class="en-auth__links"><a href="' . esc_url( home_url( '/register-student/' ) ) . '">Create a student account</a> · <a href="' . esc_url( home_url( '/register-faculty/' ) ) . '">Faculty registration</a></p></section>';
+	$redirect_to = isset( $_GET['redirect_to'] ) ? wp_validate_redirect( wp_unslash( $_GET['redirect_to'] ), home_url( '/dashboard/' ) ) : home_url( '/dashboard/' );
+	$out .= '<input type="hidden" name="redirect_to" value="' . esc_url( $redirect_to ) . '"><label class="en-auth__check"><input type="checkbox" name="remember" value="1"> Remember me</label><button class="btn btn--brand btn--block" type="submit">Log in</button></form><p class="en-auth__links"><a href="' . esc_url( home_url( '/register-student/' ) ) . '">Create a student account</a> · <a href="' . esc_url( home_url( '/register-faculty/' ) ) . '">Faculty registration</a></p></section>';
 	return $out;
 }
 
@@ -220,6 +223,13 @@ function enc_dashboard_shortcode() {
 	if ( get_user_meta( $user->ID, '_en_account_status', true ) === 'pending' ) $out .= '<p class="en-auth__notice en-auth__notice--error">Your faculty access is pending administrator approval.</p>';
 	if ( $role === 'en_student' ) {
 		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' ) ) . '</span></p></div>';
+		if ( function_exists( 'enc_student_stats' ) ) {
+			$stats = enc_student_stats( $user->ID );
+			$out .= '<div class="en-student-stats"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['registered'] ) ) . '</strong><span>Registrations</span></a><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['upcoming'] ) ) . '</strong><span>Upcoming</span></a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['proposals'] ) ) . '</strong><span>Proposals</span></a></div><p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '">My Registrations</a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '">My Proposals</a><a href="' . esc_url( home_url( '/submit-proposal/' ) ) . '">Propose an event</a></p>';
+		}
+	}
+	if ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) {
+		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/review-proposals/' ) ) . '">Review Proposals</a></p>';
 	}
 	$out .= '<div class="en-dashboard__actions"><a class="btn btn--brand" href="' . esc_url( get_post_type_archive_link( 'event' ) ) . '">Browse events</a> <a class="btn btn--ghost" href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a></div></section>';
 	return $out;

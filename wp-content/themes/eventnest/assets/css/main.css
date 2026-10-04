@@ -345,3 +345,49 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .en-profile strong{color:#FF718B;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
 .en-profile span{overflow-wrap:anywhere;color:#E9EBEF}
 @media(max-width:560px){.en-auth__row,.en-profile{grid-template-columns:1fr}}
+.en-auth__field textarea,.en-auth__field select{width:100%;min-height:46px;padding:.7rem .85rem;border:1px solid #303846;border-radius:9px;background:#090D14;color:#F5F7FB;font:500 1rem var(--font-body)}
+.en-auth__field textarea{resize:vertical}
+.en-student-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin-top:1rem}
+.en-student-stats a{display:grid;gap:.12rem;padding:.85rem 1rem;border:1px solid #292F3C;border-radius:10px;background:#0B0F16;text-decoration:none}
+.en-student-stats strong{color:#FF5574;font:800 1.65rem var(--font-display)}
+.en-student-stats span{color:#ADB4C1;font-size:.82rem}
+.en-dashboard__links{display:flex;flex-wrap:wrap;gap:.8rem;margin:1rem 0 0}
+.en-dashboard__links a{color:#FF718B;font-weight:700;text-decoration:none}
+.en-dashboard__links a:hover{text-decoration:underline}
+.en-student-list{display:grid;gap:.8rem;padding-bottom:2rem}
+.en-student-card{display:flex;align-items:flex-start;justify-content:space-between;gap:1.2rem;margin-bottom:.8rem;padding:1.15rem 1.25rem;border:1px solid #292F3C;border-radius:13px;background:linear-gradient(145deg,#121721,#0D1017)}
+.en-student-card__main{min-width:0}
+.en-student-card h2{margin:.35rem 0;font-size:1.18rem}
+.en-student-card h2 a{text-decoration:none}
+.en-student-card h2 a:hover{color:#FF718B}
+.en-student-card .muted{margin:.25rem 0;font-size:.87rem}
+.en-student-card__status{display:inline-flex;margin:0;padding:.24rem .6rem;border:1px solid rgba(255,85,116,.35);border-radius:999px;background:rgba(255,40,81,.1);color:#FF879C;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.en-student-card__status--registered,.en-student-card__status--published,.en-student-card__status--approved{border-color:rgba(72,190,130,.4);background:rgba(72,190,130,.1);color:#78D7A5}
+.en-student-card__status--cancelled,.en-student-card__status--rejected{border-color:#414754;background:#181C24;color:#ADB4C1}
+.en-student-card__action{flex:none;align-self:center}
+.en-student-card__action .btn{padding:.55rem .8rem;font-size:.84rem}
+.en-proposal-history{margin-top:.8rem;color:#C8CDD6;font-size:.86rem}
+.en-proposal-history summary{color:#FF718B;font-weight:700;cursor:pointer}
+.en-proposal-history ol{display:grid;gap:.65rem;padding-left:1.4rem}
+.en-proposal-history li p{margin:.25rem 0;color:#ADB4C1}
+.en-resubmit{margin:0 0 2rem;padding:1.2rem;border:1px dashed #414754;border-radius:13px;background:rgba(255,255,255,.02)}
+.en-resubmit h3{margin:0 0 .8rem;font-size:1.15rem}
+.en-proposal-form{margin:1.2rem 0}
+.en-proposal-form .btn{justify-self:start}
+.empty .btn--brand{color:#fff!important;-webkit-text-fill-color:#fff}
+.page-head .btn--brand{color:#fff!important;-webkit-text-fill-color:#fff}
+.en-review-card{margin:0 0 1rem;padding:1.2rem;border:1px solid #292F3C;border-radius:14px;background:linear-gradient(145deg,#121721,#0D1017)}
+.en-review-card__head h2{margin:.55rem 0 .2rem;font-size:1.35rem}
+.en-review-card__head .muted{margin:.2rem 0 .9rem;font-size:.86rem}
+.en-review-card__facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin:1rem 0}
+.en-review-card__facts span{display:grid;gap:.2rem;padding:.7rem .8rem;border:1px solid #292F3C;border-radius:9px;background:#0B0F16;color:#E9EBEF;font-size:.88rem}
+.en-review-card__facts b{color:#FF718B;font-size:.69rem;letter-spacing:.05em;text-transform:uppercase}
+.en-review-card__description{margin:1rem 0}
+.en-review-form{display:grid;gap:.8rem}
+.en-review-form__actions{display:flex;flex-wrap:wrap;gap:.6rem}
+.en-review-form__actions .btn{border-radius:9px}
+.en-review-form__actions .btn--brand{color:#fff!important;-webkit-text-fill-color:#fff}
+.btn--danger{border-color:#773242;background:#35131D;color:#FF9CAE}
+.btn--danger:hover{background:#4A1927}
+@media(max-width:620px){.en-student-stats{grid-template-columns:1fr 1fr}.en-student-card{display:grid}.en-student-card__action{justify-self:start}.en-dashboard__links{display:grid;gap:.5rem}}
+@media(max-width:700px){.en-review-card__facts{grid-template-columns:1fr 1fr}}
