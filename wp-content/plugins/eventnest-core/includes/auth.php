@@ -20,8 +20,11 @@ function enc_auth_message( $code ) {
 		'login_required' => array( 'Please log in to view your dashboard.', 'error' ),
 		'login_failed' => array( 'Those login details were not recognized. Check them and try again.', 'error' ),
 		'pending_account' => array( 'Your faculty account is awaiting administrator approval.', 'error' ),
-		'invalid' => array( 'Please check the form and try again. Passwords must match and PRN / faculty ID must be unique.', 'error' ),
-		'exists' => array( 'An account already uses that email address.', 'error' ),
+		'invalid' => array( 'Please check the required fields and try again.', 'error' ),
+		'exists' => array( 'An account on this WordPress site already uses that email address. Try logging in or use a different email.', 'error' ),
+		'password' => array( 'Passwords must match and be at least 10 characters long.', 'error' ),
+		'prn_exists' => array( 'An account on this WordPress site already uses that PRN. Try logging in or check the PRN.', 'error' ),
+		'faculty_id_exists' => array( 'A faculty request on this WordPress site already uses that Faculty ID.', 'error' ),
 	);
 	if ( ! isset( $messages[ $code ] ) ) return '';
 	return '<p class="en-auth__notice en-auth__notice--' . esc_attr( $messages[ $code ][1] ) . '" role="status">' . esc_html( $messages[ $code ][0] ) . '</p>';
@@ -92,21 +95,25 @@ add_action( 'init', function () {
 	$mobile = isset( $_POST['mobile'] ) ? sanitize_text_field( wp_unslash( $_POST['mobile'] ) ) : '';
 	$password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 	$confirm = isset( $_POST['confirm_password'] ) ? (string) wp_unslash( $_POST['confirm_password'] ) : '';
-	if ( $name === '' || ! is_email( $email ) || email_exists( $email ) || strlen( $password ) < 10 || $password !== $confirm ) enc_auth_redirect( $redirect_page, email_exists( $email ) ? 'exists' : 'invalid' );
+	if ( $name === '' || ! is_email( $email ) ) enc_auth_redirect( $redirect_page, 'invalid' );
+	if ( email_exists( $email ) ) enc_auth_redirect( $redirect_page, 'exists' );
+	if ( strlen( $password ) < 10 || $password !== $confirm ) enc_auth_redirect( $redirect_page, 'password' );
 
 	$meta = array( '_en_full_name' => $name, '_en_mobile' => $mobile );
 	if ( $is_student ) {
-		$prn = isset( $_POST['prn'] ) ? sanitize_text_field( wp_unslash( $_POST['prn'] ) ) : '';
+		$prn = isset( $_POST['prn'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['prn'] ) ) ) : '';
 		$batch = isset( $_POST['batch'] ) ? sanitize_text_field( wp_unslash( $_POST['batch'] ) ) : '';
 		$course = isset( $_POST['course'] ) ? sanitize_text_field( wp_unslash( $_POST['course'] ) ) : '';
-		if ( $prn === '' || get_users( array( 'meta_key' => '_en_prn', 'meta_value' => $prn, 'number' => 1, 'fields' => 'ids' ) ) ) enc_auth_redirect( $redirect_page, 'invalid' );
+		if ( $prn === '' ) enc_auth_redirect( $redirect_page, 'invalid' );
+		if ( get_users( array( 'meta_key' => '_en_prn', 'meta_value' => $prn, 'number' => 1, 'fields' => 'ids' ) ) ) enc_auth_redirect( $redirect_page, 'prn_exists' );
 		$meta['_en_prn'] = $prn;
 		$meta['_en_batch'] = $batch;
 		$meta['_en_course'] = $course;
 	} else {
-		$faculty_id = isset( $_POST['faculty_id'] ) ? sanitize_text_field( wp_unslash( $_POST['faculty_id'] ) ) : '';
+		$faculty_id = isset( $_POST['faculty_id'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['faculty_id'] ) ) ) : '';
 		$post = isset( $_POST['faculty_post'] ) ? sanitize_text_field( wp_unslash( $_POST['faculty_post'] ) ) : '';
-		if ( $faculty_id === '' || get_users( array( 'meta_key' => '_en_faculty_id', 'meta_value' => $faculty_id, 'number' => 1, 'fields' => 'ids' ) ) ) enc_auth_redirect( $redirect_page, 'invalid' );
+		if ( $faculty_id === '' ) enc_auth_redirect( $redirect_page, 'invalid' );
+		if ( get_users( array( 'meta_key' => '_en_faculty_id', 'meta_value' => $faculty_id, 'number' => 1, 'fields' => 'ids' ) ) ) enc_auth_redirect( $redirect_page, 'faculty_id_exists' );
 		$meta['_en_faculty_id'] = $faculty_id;
 		$meta['_en_faculty_post'] = $post;
 	}
