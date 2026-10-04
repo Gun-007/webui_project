@@ -173,11 +173,31 @@ function en_sample_events() {
 }
 
 function en_upcoming( $n = 6, $extra = array() ) {
-	return new WP_Query( array_merge( array(
-		'post_type' => 'event', 'posts_per_page' => $n, 'ignore_sticky_posts' => true,
-		'meta_key' => '_en_date', 'orderby' => 'meta_value', 'order' => 'ASC',
-		'meta_query' => array( array( 'key' => '_en_date', 'value' => current_time( 'Y-m-d' ), 'compare' => '>=', 'type' => 'DATE' ) ),
-	), $extra ) );
+
+	$date_key = en_meta_key( 'date' );
+
+	$defaults = array(
+		'post_type'           => 'event',
+		'post_status'         => 'publish',
+		'posts_per_page'      => $n,
+		'ignore_sticky_posts' => true,
+		'meta_key'            => $date_key,
+		'orderby'             => 'meta_value',
+		'order'               => 'ASC',
+
+		'meta_query' => array(
+			array(
+				'key'     => $date_key,
+				'value'   => current_time( 'Y-m-d' ),
+				'compare' => '>=',
+				'type'    => 'DATE',
+			),
+		),
+	);
+
+	return new WP_Query(
+		array_merge( $defaults, $extra )
+	);
 }
 
 /* ---------- Competitions page ---------- */
@@ -256,52 +276,328 @@ function en_card( array $e ) {
 			<?php if ( $e['cat'] ) : ?><span class="ev-card__cat"><?php echo esc_html( $e['cat'] ); ?></span><?php endif; ?>
 		</a>
 		<div class="ev-card__body">
-			<h3 class="ev-card__title"><a href="<?php echo esc_url( $e['url'] ); ?>"><?php echo esc_html( $e['title'] ); ?></a></h3>
-			<?php if ( $where ) : ?><p class="ev-card__where"><?php echo esc_html( $where ); ?></p><?php endif; ?>
-			<div class="ev-card__foot">
-				<span class="ev-card__time"><?php echo esc_html( en_fmt_time( $e['time'] ) ); ?></span>
-				<span class="chip chip--price"><?php echo esc_html( $e['price'] ); ?></span>
-			</div>
-		</div>
+
+	<h3 class="ev-card__title">
+
+		<a href="<?php echo esc_url( $e['url'] ); ?>">
+
+			<?php echo esc_html( $e['title'] ); ?>
+
+		</a>
+
+	</h3>
+
+
+	<?php if ( $where ) : ?>
+
+		<p class="ev-card__where">
+
+			📍 <?php echo esc_html( $where ); ?>
+
+		</p>
+
+	<?php endif; ?>
+
+
+	<div class="ev-card__foot">
+
+		<span class="ev-card__time">
+
+			<?php echo esc_html( en_fmt_time( $e['time'] ) ); ?>
+
+		</span>
+
+
+		<span class="chip chip--price">
+
+			<?php echo esc_html( $e['price'] ); ?>
+
+		</span>
+
+	</div>
+
+
+	<a
+		class="ev-card__action"
+		href="<?php echo esc_url( $e['url'] ); ?>"
+	>
+
+		<?php esc_html_e( 'View event', 'eventnest' ); ?>
+
+		<span aria-hidden="true">→</span>
+
+	</a>
+
+</div>
 	</article>
 	<?php
 }
 
 /* ---------- Archive filtering (search box, city, category, free) ---------- */
+/* ---------- Event archive filtering ---------- */
+
+/* ---------- Event archive filtering ---------- */
+
 add_action( 'pre_get_posts', function ( $q ) {
-	if ( is_admin() || ! $q->is_main_query() ) return;
-	$is_events = $q->is_post_type_archive( 'event' ) || $q->is_tax( array( 'event_category', 'event_city' ) )
-		|| ( $q->is_search() && $q->get( 'post_type' ) === 'event' );
-	if ( ! $is_events ) return;
+
+	if ( is_admin() || ! $q->is_main_query() ) {
+		return;
+	}
+
+	/*
+	 * Detect the Event archive/search query.
+	 */
+	$post_type = $q->get( 'post_type' );
+
+	$is_event_archive =
+		$q->is_post_type_archive( 'event' )
+		|| 'event' === $post_type
+		|| (
+			is_array( $post_type )
+			&& in_array( 'event', $post_type, true )
+		)
+		|| $q->is_tax( array( 'event_category', 'event_city' ) );
+
+	if ( ! $is_event_archive ) {
+		return;
+	}
+
+
+	/*
+	 * Make absolutely sure the query only contains Events.
+	 */
+	$q->set( 'post_type', 'event' );
+	$q->set( 'post_status', 'publish' );
+	$q->set( 'posts_per_page', 12 );
+
+
+	/*
+	 * Event date.
+	 */
+	$date_key = en_meta_key( 'date' );
+
+
+	/*
+	 * Build meta query.
+	 *
+	 * IMPORTANT:
+	 * We do NOT require a date here initially.
+	 * This prevents an event from disappearing just
+	 * because the date field wasn't saved correctly.
+	 */
+	$meta_query = array();
+
+
+	/*
+	 * Date filter.
+	 */
+	$when = isset( $_GET['when'] )
+		? sanitize_key(
+			wp_unslash( $_GET['when'] )
+		)
+		: '';
+
 
 	$today = current_time( 'Y-m-d' );
-	$mq    = array( array( 'key' => '_en_date', 'value' => $today, 'compare' => '>=', 'type' => 'DATE' ) );
-	$when  = isset( $_GET['when'] ) ? sanitize_key( wp_unslash( $_GET['when'] ) ) : '';
-	if ( 'week' === $when || 'month' === $when ) {
-		$last_day = 'week' === $when
-			? date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS )
-			: date( 'Y-m-t', current_time( 'timestamp' ) );
-		$mq[0] = array( 'key' => '_en_date', 'value' => array( $today, $last_day ), 'compare' => 'BETWEEN', 'type' => 'DATE' );
-	}
-	if ( isset( $_GET['free'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['free'] ) ) ) {
-		$mq[] = array( 'relation' => 'OR',
-			array( 'key' => en_meta_key( 'price' ), 'compare' => 'NOT EXISTS' ),
-			array( 'key' => en_meta_key( 'price' ), 'value' => array( '', '0' ), 'compare' => 'IN' ) );
-	}
-	$q->set( 'post_type', 'event' );
-	$q->set( 'posts_per_page', 12 );
-	$q->set( 'meta_key', '_en_date' );
-	$q->set( 'orderby', 'meta_value' );
-	$q->set( 'order', 'ASC' );
-	$q->set( 'meta_query', $mq );
-} );
 
-add_filter( 'template_include', function ( $t ) {
-	if ( is_search() && get_query_var( 'post_type' ) === 'event' ) {
-		$n = locate_template( 'archive-event.php' );
-		if ( $n ) return $n;
+
+	if ( 'week' === $when ) {
+
+		$last_day = wp_date(
+			'Y-m-d',
+			current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS )
+		);
+
+		$meta_query[] = array(
+			'key'     => $date_key,
+			'value'   => array( $today, $last_day ),
+			'compare' => 'BETWEEN',
+			'type'    => 'DATE',
+		);
+
+	} elseif ( 'month' === $when ) {
+
+		$last_day = wp_date(
+			'Y-m-t',
+			current_time( 'timestamp' )
+		);
+
+		$meta_query[] = array(
+			'key'     => $date_key,
+			'value'   => array( $today, $last_day ),
+			'compare' => 'BETWEEN',
+			'type'    => 'DATE',
+		);
+
+	} else {
+
+		/*
+		 * Default:
+		 * show upcoming events.
+		 *
+		 * We use EXISTS instead of forcing a date value
+		 * so events with other valid data don't disappear.
+		 */
+		$meta_query[] = array(
+			'key'     => $date_key,
+			'compare' => 'EXISTS',
+		);
+
 	}
-	return $t;
+
+
+	/*
+	 * Free-only filter.
+	 */
+	$free = isset( $_GET['free'] )
+		&& '1' === sanitize_text_field(
+			wp_unslash( $_GET['free'] )
+		);
+
+
+	if ( $free ) {
+
+		$price_key = en_meta_key( 'price' );
+
+		$meta_query[] = array(
+			'relation' => 'OR',
+
+			array(
+				'key'     => $price_key,
+				'compare' => 'NOT EXISTS',
+			),
+
+			array(
+				'key'     => $price_key,
+				'value'   => array(
+					'',
+					'0',
+					'0.00',
+				),
+				'compare' => 'IN',
+			),
+
+		);
+
+	}
+
+
+	/*
+	 * Category filter.
+	 */
+	$tax_query = array();
+
+
+	if ( ! empty( $_GET['event_category'] ) ) {
+
+		$category = sanitize_title(
+			wp_unslash(
+				$_GET['event_category']
+			)
+		);
+
+		if ( $category ) {
+
+			$tax_query[] = array(
+				'taxonomy' => 'event_category',
+				'field'    => 'slug',
+				'terms'    => $category,
+			);
+
+		}
+
+	}
+
+
+	/*
+	 * City filter.
+	 */
+	if ( ! empty( $_GET['event_city'] ) ) {
+
+		$city = sanitize_title(
+			wp_unslash(
+				$_GET['event_city']
+			)
+		);
+
+		if ( $city ) {
+
+			$tax_query[] = array(
+				'taxonomy' => 'event_city',
+				'field'    => 'slug',
+				'terms'    => $city,
+			);
+
+		}
+
+	}
+
+
+	/*
+	 * Apply taxonomy filtering.
+	 */
+	if ( ! empty( $tax_query ) ) {
+
+		$tax_query['relation'] = 'AND';
+
+		$q->set(
+			'tax_query',
+			$tax_query
+		);
+
+	}
+
+
+	/*
+	 * Apply meta filtering.
+	 */
+	if ( ! empty( $meta_query ) ) {
+
+		$q->set(
+			'meta_query',
+			$meta_query
+		);
+
+	}
+
+
+	/*
+	 * Search.
+	 */
+	if ( ! empty( $_GET['s'] ) ) {
+
+		$search = sanitize_text_field(
+			wp_unslash(
+				$_GET['s']
+			)
+		);
+
+		$q->set(
+			's',
+			$search
+		);
+
+	}
+
+
+	/*
+	 * Sort events by event date.
+	 */
+	$q->set(
+		'meta_key',
+		$date_key
+	);
+
+	$q->set(
+		'orderby',
+		'meta_value'
+	);
+
+	$q->set(
+		'order',
+		'ASC'
+	);
+
 } );
 
 /* ---------- Google Calendar link ---------- */
