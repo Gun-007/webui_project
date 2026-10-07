@@ -15,10 +15,26 @@ add_action( 'init', function () {
 
 add_action( 'admin_post_enc_apply_club', 'enc_handle_club_application' );
 add_action( 'admin_post_nopriv_enc_apply_club', 'enc_handle_club_application' );
+add_action( 'admin_post_enc_edit_club_application', 'enc_handle_club_application_edit' );
 add_action( 'admin_post_enc_review_club_membership', 'enc_handle_club_membership_review' );
 
 function enc_club_membership_table() {
 	return enc_table( 'club_memberships' );
+}
+
+function enc_log_club_application_history( $membership_id, $actor_id, $action, $status, $message = '', $review_note = '' ) {
+	global $wpdb;
+	return $wpdb->insert( enc_table( 'club_application_history' ), array(
+		'membership_id' => absint( $membership_id ), 'actor_id' => absint( $actor_id ),
+		'action' => sanitize_key( $action ), 'status' => sanitize_key( $status ),
+		'message' => sanitize_textarea_field( $message ), 'review_note' => sanitize_textarea_field( $review_note ),
+		'created_at' => current_time( 'mysql', true ),
+	), array( '%d', '%d', '%s', '%s', '%s', '%s', '%s' ) );
+}
+
+function enc_club_application_history( $membership_id ) {
+	global $wpdb;
+	return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . enc_table( 'club_application_history' ) . ' WHERE membership_id = %d ORDER BY id ASC', absint( $membership_id ) ) );
 }
 
 function enc_is_club_student( $user_id = 0 ) {
@@ -35,7 +51,12 @@ function enc_can_review_club_membership( $club_id, $user_id = 0 ) {
 	if ( ! $user ) return false;
 	$roles = (array) $user->roles;
 	if ( in_array( 'en_club_head', $roles, true ) && absint( get_post_meta( $club_id, '_en_club_head', true ) ) === $user_id ) return true;
-	if ( in_array( 'en_faculty', $roles, true ) && absint( get_post_meta( $club_id, '_en_club_faculty', true ) ) === $user_id ) return true;
+	$club_department = absint( get_post_meta( $club_id, '_en_department', true ) );
+	$user_department = enc_user_department_id( $user_id );
+	if ( in_array( 'en_faculty_head', $roles, true ) ) return $club_department && $club_department === $user_department;
+	if ( in_array( 'en_faculty', $roles, true ) && absint( get_post_meta( $club_id, '_en_club_faculty', true ) ) === $user_id ) {
+		return ! $club_department || $club_department === $user_department;
+	}
 	return false;
 }
 
@@ -62,15 +83,33 @@ function enc_handle_club_application() {
 	global $wpdb;
 	$table = enc_club_membership_table();
 	$user_id = get_current_user_id();
-	$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id, status FROM $table WHERE club_id = %d AND user_id = %d LIMIT 1", $club_id, $user_id ) );
+	$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id, status, message, review_note FROM $table WHERE club_id = %d AND user_id = %d LIMIT 1", $club_id, $user_id ) );
 	if ( $existing && $existing->status === 'approved' ) enc_club_membership_redirect( $club_id, 'already_member' );
 	if ( $existing && $existing->status === 'pending' ) enc_club_membership_redirect( $club_id, 'already_pending' );
 	if ( $existing ) {
 		$saved = $wpdb->update( $table, array( 'status' => 'pending', 'message' => $message, 'review_note' => null, 'created_at' => current_time( 'mysql', true ), 'reviewed_by' => 0, 'reviewed_at' => null ), array( 'id' => (int) $existing->id, 'user_id' => $user_id ), array( '%s', '%s', '%s', '%s', '%d', '%s' ), array( '%d', '%d' ) );
+		if ( $saved !== false ) enc_log_club_application_history( $existing->id, $user_id, 'resubmitted', 'pending', $message );
 	} else {
 		$saved = $wpdb->insert( $table, array( 'club_id' => $club_id, 'user_id' => $user_id, 'status' => 'pending', 'message' => $message, 'created_at' => current_time( 'mysql', true ) ), array( '%d', '%d', '%s', '%s', '%s' ) );
+		if ( $saved ) enc_log_club_application_history( $wpdb->insert_id, $user_id, 'submitted', 'pending', $message );
 	}
 	enc_club_membership_redirect( $club_id, $saved ? 'applied' : 'error' );
+}
+
+function enc_handle_club_application_edit() {
+	$membership_id = isset( $_POST['application_id'] ) ? absint( $_POST['application_id'] ) : 0;
+	$user_id = get_current_user_id();
+	global $wpdb;
+	$table = enc_club_membership_table();
+	$application = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d AND user_id = %d LIMIT 1", $membership_id, $user_id ) );
+	if ( ! $application || ! enc_is_club_student( $user_id ) || $application->status !== 'pending' ) wp_die( esc_html__( 'Only your pending club application can be edited.', 'eventnest-core' ), '', array( 'response' => 403 ) );
+	$nonce = isset( $_POST['enc_edit_club_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['enc_edit_club_nonce'] ) ) : '';
+	if ( ! wp_verify_nonce( $nonce, 'enc_edit_club_application_' . $membership_id ) ) enc_club_membership_redirect( $application->club_id, 'error' );
+	$message = isset( $_POST['application_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['application_message'] ) ) : '';
+	$message = function_exists( 'mb_substr' ) ? mb_substr( $message, 0, 1500 ) : substr( $message, 0, 1500 );
+	$saved = $wpdb->update( $table, array( 'message' => $message ), array( 'id' => $membership_id, 'user_id' => $user_id, 'status' => 'pending' ), array( '%s' ), array( '%d', '%d', '%s' ) );
+	if ( $saved !== false ) enc_log_club_application_history( $membership_id, $user_id, 'edited', 'pending', $message );
+	enc_club_membership_redirect( $application->club_id, $saved !== false ? 'application_updated' : 'error' );
 }
 
 function enc_handle_club_membership_review() {
@@ -84,6 +123,10 @@ function enc_handle_club_membership_review() {
 	$note = isset( $_POST['review_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_note'] ) ) : '';
 	global $wpdb;
 	$saved = $wpdb->update( enc_club_membership_table(), array( 'status' => $decision, 'review_note' => $note, 'reviewed_by' => get_current_user_id(), 'reviewed_at' => current_time( 'mysql', true ) ), array( 'id' => $application_id, 'club_id' => $club_id, 'status' => 'pending' ), array( '%s', '%s', '%d', '%s' ), array( '%d', '%d', '%s' ) );
+	if ( $saved ) {
+		$application = $wpdb->get_row( $wpdb->prepare( 'SELECT message FROM ' . enc_club_membership_table() . ' WHERE id = %d', $application_id ) );
+		enc_log_club_application_history( $application_id, get_current_user_id(), $decision, $decision, $application ? $application->message : '', $note );
+	}
 	enc_club_membership_redirect( $club_id, $saved ? 'reviewed' : 'review_error' );
 }
 
@@ -93,6 +136,7 @@ function enc_club_membership_notices( $application_status = '' ) {
 		'applied' => array( 'Your application was sent to the club for review.', 'success' ),
 		'already_pending' => array( 'Your application is already waiting for review.', 'info' ),
 		'already_member' => array( 'You are already a member of this club.', 'info' ),
+		'application_updated' => array( 'Your application was updated and is still waiting for review.', 'success' ),
 		'reviewed' => array( 'The application decision was saved.', 'success' ),
 		'review_error' => array( 'We could not save that decision. The application may already have been reviewed.', 'error' ),
 		'error' => array( 'We could not submit the application. Please try again.', 'error' ),
@@ -112,13 +156,14 @@ function enc_club_membership_panel( $club_id ) {
 	$user_id = get_current_user_id();
 	$is_reviewer = $user_id && enc_can_review_club_membership( $club_id, $user_id ) && ! enc_is_club_student( $user_id );
 	$heading = $is_reviewer ? 'Club applications' : 'Join this club';
-	$application = $user_id && enc_is_club_student( $user_id ) ? $wpdb->get_row( $wpdb->prepare( 'SELECT status, message, review_note FROM ' . enc_club_membership_table() . ' WHERE club_id = %d AND user_id = %d LIMIT 1', $club_id, $user_id ) ) : false;
+	$application = $user_id && enc_is_club_student( $user_id ) ? $wpdb->get_row( $wpdb->prepare( 'SELECT id, status, message, review_note FROM ' . enc_club_membership_table() . ' WHERE club_id = %d AND user_id = %d LIMIT 1', $club_id, $user_id ) ) : false;
 	$out = '<section class="en-club-membership"><h2>' . esc_html( $heading ) . '</h2>' . enc_club_membership_notices( $application ? $application->status : '' );
 	if ( $user_id && enc_is_club_student( $user_id ) ) {
 		if ( $application && $application->status === 'approved' ) {
 			$out .= '<p>You are a member of this club.</p>';
 		} elseif ( $application && $application->status === 'pending' ) {
-			$out .= '<p>Your application is <strong>pending review</strong>.</p>';
+			$out .= '<p>Your application is <strong>pending review</strong>.</p><form class="en-auth en-club-apply" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_edit_club_application"><input type="hidden" name="application_id" value="' . esc_attr( $application->id ) . '">' . wp_nonce_field( 'enc_edit_club_application_' . $application->id, 'enc_edit_club_nonce', true, false );
+			$out .= '<label class="en-auth__field"><span>Edit your note while the application is pending</span><textarea name="application_message" rows="3" maxlength="1500">' . esc_textarea( $application->message ) . '</textarea></label><button class="btn btn--ghost" type="submit">Save changes</button></form>';
 		} else {
 			if ( $application && $application->review_note ) $out .= '<p class="muted">Reviewer note: ' . esc_html( $application->review_note ) . '</p>';
 			$out .= '<p class="muted">Send a short note to the club head or faculty in-charge.</p><form class="en-auth en-club-apply" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
@@ -140,6 +185,17 @@ function enc_club_membership_panel( $club_id ) {
 			foreach ( $rows as $row ) {
 				$out .= '<article class="en-club-application"><h4>' . esc_html( $row->display_name ) . '</h4><p class="muted">' . esc_html( $row->prn ?: 'Student' ) . ' · <a href="mailto:' . esc_attr( $row->user_email ) . '">' . esc_html( $row->user_email ) . '</a></p>';
 				if ( $row->message ) $out .= '<p>' . nl2br( esc_html( $row->message ) ) . '</p>';
+				$application_history = enc_club_application_history( $row->id );
+				if ( $application_history ) {
+					$out .= '<details class="en-proposal-history"><summary>Application history</summary><ol>';
+					foreach ( $application_history as $entry ) {
+						$actor = get_userdata( (int) $entry->actor_id );
+						$out .= '<li><strong>' . esc_html( ucwords( str_replace( '_', ' ', $entry->action ) ) ) . '</strong> · ' . esc_html( $actor ? $actor->display_name : 'EventNest' ) . ' · ' . esc_html( get_date_from_gmt( $entry->created_at, 'j M Y, g:i a' ) );
+						if ( $entry->message ) $out .= '<p>' . nl2br( esc_html( $entry->message ) ) . '</p>';
+						$out .= '</li>';
+					}
+					$out .= '</ol></details>';
+				}
 				$out .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="en-club-review__form"><input type="hidden" name="action" value="enc_review_club_membership"><input type="hidden" name="club_id" value="' . esc_attr( $club_id ) . '"><input type="hidden" name="application_id" value="' . esc_attr( $row->id ) . '">' . wp_nonce_field( 'enc_review_club_membership_' . $row->id, 'enc_review_club_nonce', true, false );
 				$out .= '<label class="en-auth__field"><span>Decision note <small>(optional)</small></span><textarea name="review_note" rows="2" maxlength="1000"></textarea></label><button class="btn btn--brand" name="decision" value="approved" type="submit">Approve</button> <button class="btn btn--ghost" name="decision" value="rejected" type="submit">Decline</button></form></article>';
 			}
@@ -163,6 +219,18 @@ function enc_my_clubs_shortcode() {
 		$status = sanitize_html_class( $row->status );
 		$out .= '<article class="en-club-application"><p class="en-registration-status en-registration-status--' . esc_attr( $status ) . '">' . esc_html( ucfirst( $row->status ) ) . '</p><h2><a href="' . esc_url( get_permalink( $row->club_id ) ) . '">' . esc_html( $row->post_title ?: 'Club unavailable' ) . '</a></h2><p class="muted">Applied ' . esc_html( get_date_from_gmt( $row->created_at, 'j M Y' ) ) . '</p>';
 		if ( $row->review_note ) $out .= '<p class="muted">Reviewer note: ' . esc_html( $row->review_note ) . '</p>';
+		$history = enc_club_application_history( $row->id );
+		if ( $history ) {
+			$out .= '<details class="en-proposal-history"><summary>Application history</summary><ol>';
+			foreach ( $history as $entry ) {
+				$actor = get_userdata( (int) $entry->actor_id );
+				$out .= '<li><strong>' . esc_html( ucwords( str_replace( '_', ' ', $entry->action ) ) ) . '</strong> · ' . esc_html( $actor ? $actor->display_name : 'EventNest' ) . ' · ' . esc_html( get_date_from_gmt( $entry->created_at, 'j M Y, g:i a' ) );
+				if ( $entry->message ) $out .= '<p>' . nl2br( esc_html( $entry->message ) ) . '</p>';
+				if ( $entry->review_note ) $out .= '<p>Reviewer note: ' . nl2br( esc_html( $entry->review_note ) ) . '</p>';
+				$out .= '</li>';
+			}
+			$out .= '</ol></details>';
+		}
 		$out .= '</article>';
 	}
 	return $out . '</div></div></section>';

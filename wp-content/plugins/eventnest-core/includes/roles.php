@@ -30,6 +30,7 @@ function enc_role_map() {
 	$events_own  = enc_cpt_caps( 'en_events', true );
 	$ann_full    = enc_cpt_caps( 'en_announcements' );
 	$ann_own     = enc_cpt_caps( 'en_announcements', true );
+	$departments = enc_cpt_caps( 'en_departments' );
 
 	return array(
 		'en_student' => array(
@@ -39,6 +40,10 @@ function enc_role_map() {
 		'en_faculty' => array(
 			'label' => 'Faculty',
 			'caps'  => array_merge( array( 'read', 'upload_files', 'en_review_faculty', 'en_view_registrations' ), $events_full, $ann_own ),
+		),
+		'en_faculty_head' => array(
+			'label' => 'Faculty Head',
+			'caps'  => array_merge( array( 'read', 'upload_files', 'en_review_faculty', 'en_view_registrations', 'en_view_analytics' ), $events_full, $ann_own ),
 		),
 		'en_club_head' => array(
 			'label' => 'Club Head',
@@ -57,6 +62,7 @@ function enc_role_map() {
 
 /** Create roles if missing and make sure each has exactly the capabilities above (idempotent). */
 function enc_sync_roles() {
+	$departments = enc_cpt_caps( 'en_departments' );
 	foreach ( enc_role_map() as $slug => $def ) {
 		$role = get_role( $slug );
 		if ( ! $role ) $role = add_role( $slug, $def['label'], array() );
@@ -64,13 +70,13 @@ function enc_sync_roles() {
 		$wanted = array_fill_keys( $def['caps'], true );
 		foreach ( $wanted as $cap => $v ) $role->add_cap( $cap );
 		// Remove capabilities we manage but no longer grant.
-		$managed = array_merge( enc_custom_caps(), enc_cpt_caps( 'en_events' ), enc_cpt_caps( 'en_announcements' ), enc_cpt_caps( 'en_clubs' ), enc_cpt_caps( 'en_proposals' ) );
+		$managed = array_merge( enc_custom_caps(), enc_cpt_caps( 'en_events' ), enc_cpt_caps( 'en_announcements' ), enc_cpt_caps( 'en_clubs' ), enc_cpt_caps( 'en_proposals' ), enc_cpt_caps( 'en_departments' ) );
 		foreach ( $managed as $cap ) if ( ! isset( $wanted[ $cap ] ) && $role->has_cap( $cap ) ) $role->remove_cap( $cap );
 	}
 	// WordPress Administrator = EventNest Admin: gets everything.
 	$admin = get_role( 'administrator' );
 	if ( $admin ) {
-		$all = array_merge( enc_custom_caps(), enc_cpt_caps( 'en_events' ), enc_cpt_caps( 'en_clubs' ), enc_cpt_caps( 'en_proposals' ), enc_cpt_caps( 'en_announcements' ) );
+		$all = array_merge( enc_custom_caps(), enc_cpt_caps( 'en_events' ), enc_cpt_caps( 'en_clubs' ), enc_cpt_caps( 'en_proposals' ), enc_cpt_caps( 'en_announcements' ), $departments );
 		foreach ( $all as $cap ) $admin->add_cap( $cap );
 	}
 }
@@ -80,7 +86,7 @@ function enc_user_role( $user_id = 0 ) {
 	$user = $user_id ? get_userdata( $user_id ) : wp_get_current_user();
 	if ( ! $user || ! $user->exists() ) return '';
 	if ( in_array( 'administrator', (array) $user->roles, true ) ) return 'administrator';
-	foreach ( array( 'en_director', 'en_deputy_director', 'en_faculty', 'en_club_head', 'en_student' ) as $r ) {
+	foreach ( array( 'en_director', 'en_deputy_director', 'en_faculty_head', 'en_faculty', 'en_club_head', 'en_student' ) as $r ) {
 		if ( in_array( $r, (array) $user->roles, true ) ) return $r;
 	}
 	return '';

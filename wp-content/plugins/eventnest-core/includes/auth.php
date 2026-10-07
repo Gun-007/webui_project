@@ -19,6 +19,7 @@ function enc_auth_message( $code ) {
 		'pending' => array( 'Your faculty account request was submitted. An administrator must approve your access.', 'success' ),
 		'login_required' => array( 'Please log in to view your dashboard.', 'error' ),
 		'login_failed' => array( 'Those login details were not recognized. Check them and try again.', 'error' ),
+		'account_disabled' => array( 'This account has been disabled. Contact an administrator for help.', 'error' ),
 		'pending_account' => array( 'Your faculty account is awaiting administrator approval.', 'error' ),
 		'invalid' => array( 'Please check the required fields and try again.', 'error' ),
 		'exists' => array( 'An account on this WordPress site already uses that email address. Try logging in or use a different email.', 'error' ),
@@ -78,11 +79,11 @@ add_action( 'init', function () {
 			$user = get_user_by( 'email', $identity );
 			if ( $user ) $username = $user->user_login;
 		} else {
-			$matches = get_users( array( 'meta_key' => '_en_prn', 'meta_value' => $identity, 'number' => 1, 'fields' => 'all' ) );
-			if ( $matches ) $username = $matches[0]->user_login;
+			$user = enc_find_student_by_prn( $identity );
+			if ( $user ) $username = $user->user_login;
 		}
 		$user = wp_signon( array( 'user_login' => $username, 'user_password' => $password, 'remember' => ! empty( $_POST['remember'] ) ), is_ssl() );
-		if ( is_wp_error( $user ) ) enc_auth_redirect( 'login', 'login_failed' );
+		if ( is_wp_error( $user ) ) enc_auth_redirect( 'login', $user->get_error_code() === 'en_account_disabled' ? 'account_disabled' : 'login_failed' );
 		$requested = isset( $_POST['redirect_to'] ) ? wp_unslash( $_POST['redirect_to'] ) : home_url( '/dashboard/' );
 		wp_safe_redirect( wp_validate_redirect( $requested, home_url( '/dashboard/' ) ) );
 		exit;
@@ -100,12 +101,14 @@ add_action( 'init', function () {
 	if ( strlen( $password ) < 10 || $password !== $confirm ) enc_auth_redirect( $redirect_page, 'password' );
 
 	$meta = array( '_en_full_name' => $name, '_en_mobile' => $mobile );
+	$prn_reservation = '';
 	if ( $is_student ) {
 		$prn = isset( $_POST['prn'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['prn'] ) ) ) : '';
 		$batch = isset( $_POST['batch'] ) ? sanitize_text_field( wp_unslash( $_POST['batch'] ) ) : '';
 		$course = isset( $_POST['course'] ) ? sanitize_text_field( wp_unslash( $_POST['course'] ) ) : '';
 		if ( $prn === '' ) enc_auth_redirect( $redirect_page, 'invalid' );
-		if ( get_users( array( 'meta_key' => '_en_prn', 'meta_value' => $prn, 'number' => 1, 'fields' => 'ids' ) ) ) enc_auth_redirect( $redirect_page, 'prn_exists' );
+		$prn_reservation = enc_reserve_student_prn( $prn );
+		if ( is_wp_error( $prn_reservation ) ) enc_auth_redirect( $redirect_page, 'prn_exists' );
 		$meta['_en_prn'] = $prn;
 		$meta['_en_batch'] = $batch;
 		$meta['_en_course'] = $course;
@@ -121,7 +124,16 @@ add_action( 'init', function () {
 	$email_parts = explode( '@', $email );
 	$username_seed = $is_student ? 'student_' . $meta['_en_prn'] : $email_parts[0];
 	$user_id = wp_create_user( enc_auth_unique_username( $username_seed ), $password, $email );
-	if ( is_wp_error( $user_id ) ) enc_auth_redirect( $redirect_page, 'invalid' );
+	if ( is_wp_error( $user_id ) ) {
+		if ( $prn_reservation ) enc_release_student_prn_reservation( $prn_reservation );
+		enc_auth_redirect( $redirect_page, 'invalid' );
+	}
+	if ( $prn_reservation && ! enc_claim_student_prn( $prn_reservation, $user_id ) ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		wp_delete_user( $user_id );
+		enc_release_student_prn_reservation( $prn_reservation );
+		enc_auth_redirect( $redirect_page, 'prn_exists' );
+	}
 	wp_update_user( array( 'ID' => $user_id, 'display_name' => $name, 'first_name' => $name ) );
 	$user = new WP_User( $user_id );
 	$user->set_role( $is_student ? 'en_student' : 'subscriber' );
@@ -132,7 +144,7 @@ add_action( 'init', function () {
 
 /** Assigning a verified EventNest staff role in Users completes the pending signup. */
 add_action( 'set_user_role', function ( $user_id, $role ) {
-	if ( in_array( $role, array( 'en_faculty', 'en_club_head', 'en_deputy_director', 'en_director', 'administrator' ), true ) ) {
+	if ( get_user_meta( $user_id, '_en_account_status', true ) !== 'disabled' && in_array( $role, array( 'en_faculty', 'en_faculty_head', 'en_club_head', 'en_deputy_director', 'en_director', 'administrator' ), true ) ) {
 		delete_user_meta( $user_id, '_en_account_status' );
 	}
 }, 10, 2 );
@@ -147,7 +159,7 @@ add_action( 'admin_post_enc_approve_faculty', function () {
 	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
 	$role = isset( $_POST['eventnest_role'] ) ? sanitize_key( wp_unslash( $_POST['eventnest_role'] ) ) : '';
 	$nonce = isset( $_POST['enc_approval_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['enc_approval_nonce'] ) ) : '';
-	if ( ! wp_verify_nonce( $nonce, 'enc_approve_faculty_' . $user_id ) || ! in_array( $role, array( 'en_faculty', 'en_club_head' ), true ) || get_user_meta( $user_id, '_en_account_status', true ) !== 'pending' ) {
+	if ( ! wp_verify_nonce( $nonce, 'enc_approve_faculty_' . $user_id ) || ! in_array( $role, array( 'en_faculty', 'en_faculty_head', 'en_club_head' ), true ) || get_user_meta( $user_id, '_en_account_status', true ) !== 'pending' ) {
 		wp_safe_redirect( add_query_arg( 'request_result', 'invalid', admin_url( 'users.php?page=enc-faculty-requests' ) ) );
 		exit;
 	}
@@ -156,7 +168,18 @@ add_action( 'admin_post_enc_approve_faculty', function () {
 		wp_safe_redirect( add_query_arg( 'request_result', 'invalid', admin_url( 'users.php?page=enc-faculty-requests' ) ) );
 		exit;
 	}
+	$department_id = isset( $_POST['department_id'] ) ? absint( $_POST['department_id'] ) : 0;
+	if ( 'en_faculty_head' === $role && ! $department_id ) {
+		wp_safe_redirect( add_query_arg( 'request_result', 'department_required', admin_url( 'users.php?page=enc-faculty-requests' ) ) );
+		exit;
+	}
+	if ( $department_id && ( get_post_type( $department_id ) !== 'faculty_department' || get_post_status( $department_id ) !== 'publish' ) ) {
+		wp_safe_redirect( add_query_arg( 'request_result', 'invalid', admin_url( 'users.php?page=enc-faculty-requests' ) ) );
+		exit;
+	}
 	$user->set_role( $role );
+	if ( $department_id && in_array( $role, array( 'en_faculty', 'en_faculty_head' ), true ) ) update_user_meta( $user_id, '_en_department', $department_id );
+	else delete_user_meta( $user_id, '_en_department' );
 	update_user_meta( $user_id, '_en_account_status', 'approved' );
 	wp_safe_redirect( add_query_arg( 'request_result', 'approved', admin_url( 'users.php?page=enc-faculty-requests' ) ) );
 	exit;
@@ -176,6 +199,7 @@ function enc_render_faculty_requests() {
 	$result = isset( $_GET['request_result'] ) ? sanitize_key( wp_unslash( $_GET['request_result'] ) ) : '';
 	if ( $result === 'approved' ) echo '<div class="notice notice-success is-dismissible"><p>Request approved and role assigned.</p></div>';
 	if ( $result === 'invalid' ) echo '<div class="notice notice-error"><p>Could not process that request. Refresh the list and try again.</p></div>';
+	if ( $result === 'department_required' ) echo '<div class="notice notice-error"><p>Choose a department before approving a Faculty Head.</p></div>';
 	if ( ! $requests ) {
 		echo '<p>No pending requests.</p></div>';
 		return;
@@ -191,7 +215,7 @@ function enc_render_faculty_requests() {
 		echo '<td>' . esc_html( get_date_from_gmt( $user->user_registered, 'Y-m-d H:i' ) ) . '</td><td>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_approve_faculty"><input type="hidden" name="user_id" value="' . esc_attr( $user_id ) . '">';
 		echo wp_nonce_field( 'enc_approve_faculty_' . $user_id, 'enc_approval_nonce', true, false );
-		echo '<select name="eventnest_role" aria-label="Role for ' . esc_attr( $user->display_name ) . '"><option value="en_faculty">Faculty</option><option value="en_club_head">Club Head</option></select> ';
+		echo '<select name="eventnest_role" aria-label="Role for ' . esc_attr( $user->display_name ) . '"><option value="en_faculty">Faculty</option><option value="en_faculty_head">Faculty Head</option><option value="en_club_head">Club Head</option></select> <select name="department_id" aria-label="Department for ' . esc_attr( $user->display_name ) . '">' . enc_department_choices() . '</select> ';
 		submit_button( 'Approve', 'primary small', 'submit', false );
 		echo '</form></td></tr>';
 	}
@@ -224,12 +248,12 @@ function enc_dashboard_shortcode() {
 	if ( ! is_user_logged_in() ) return '<section class="en-auth-card"><h1>Log in to continue</h1>' . enc_auth_message( 'login_required' ) . '<a class="btn btn--brand" href="' . esc_url( home_url( '/login/' ) ) . '">Log in</a></section>';
 	$user = wp_get_current_user();
 	$role = enc_user_role( $user->ID );
-	$labels = array( 'en_student' => 'Student Dashboard', 'en_faculty' => 'Faculty Dashboard', 'en_club_head' => 'Club Head Dashboard', 'en_deputy_director' => 'Deputy Director Dashboard', 'en_director' => 'Director Dashboard', 'administrator' => 'Admin Dashboard', 'subscriber' => 'Account awaiting approval' );
+	$labels = array( 'en_student' => 'Student Dashboard', 'en_faculty' => 'Faculty Dashboard', 'en_faculty_head' => 'Faculty Head Dashboard', 'en_club_head' => 'Club Head Dashboard', 'en_deputy_director' => 'Deputy Director Dashboard', 'en_director' => 'Director Dashboard', 'administrator' => 'Admin Dashboard', 'subscriber' => 'Account awaiting approval' );
 	$title = isset( $labels[ $role ] ) ? $labels[ $role ] : 'EventNest Dashboard';
 	$out = '<section class="en-auth-card en-dashboard"><p class="eyebrow eyebrow--small">YOUR EVENTNEST</p><h1>' . esc_html( $title ) . '</h1><p>Welcome, ' . esc_html( $user->display_name ) . '.</p>';
 	if ( get_user_meta( $user->ID, '_en_account_status', true ) === 'pending' ) $out .= '<p class="en-auth__notice en-auth__notice--error">Your faculty access is pending administrator approval.</p>';
 	if ( $role === 'en_student' ) {
-		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' ) ) . '</span></p></div>';
+		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' ) ) . '</span></p></div><p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-profile/' ) ) . '">Edit my profile</a></p>';
 		if ( function_exists( 'enc_student_stats' ) ) {
 			$stats = enc_student_stats( $user->ID );
 			$out .= '<div class="en-student-stats"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['registered'] ) ) . '</strong><span>Registrations</span></a><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['upcoming'] ) ) . '</strong><span>Upcoming</span></a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['proposals'] ) ) . '</strong><span>Proposals</span></a></div><p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '">My Registrations</a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '">My Proposals</a><a href="' . esc_url( home_url( '/my-clubs/' ) ) . '">My Clubs</a><a href="' . esc_url( home_url( '/submit-proposal/' ) ) . '">Propose an event</a></p>';
@@ -239,7 +263,7 @@ function enc_dashboard_shortcode() {
 	if ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) {
 		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/review-proposals/' ) ) . '">Review Proposals</a></p>';
 	}
-	if ( current_user_can( 'manage_options' ) ) {
+	if ( function_exists( 'enc_registration_scope' ) && enc_registration_scope() ) {
 		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/event-registrations/' ) ) . '">View event registrations</a></p>';
 	}
 	$out .= '<div class="en-dashboard__actions"><a class="btn btn--brand" href="' . esc_url( get_post_type_archive_link( 'event' ) ) . '">Browse events</a> <a class="btn btn--ghost" href="' . esc_url( wp_logout_url( home_url( '/' ) ) ) . '">Log out</a></div></section>';
