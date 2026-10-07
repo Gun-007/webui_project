@@ -1,7 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.2.6' );
+define( 'EN_VERSION', '1.2.7' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/demo-events.php';
