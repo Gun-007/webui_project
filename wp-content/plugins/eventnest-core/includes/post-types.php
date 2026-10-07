@@ -28,7 +28,6 @@ function enc_seed_default_clubs() {
 	}
 	if ( $complete ) update_option( 'enc_default_clubs_seeded', 1, false );
 }
-add_action( 'init', 'enc_seed_default_clubs', 30 );
 
 /** Add one editable, future-dated sample event to each blueprint club once. */
 function enc_seed_default_club_events() {
@@ -72,7 +71,6 @@ function enc_seed_default_club_events() {
 	}
 	if ( $complete ) update_option( 'enc_default_club_events_seeded', 1, false );
 }
-add_action( 'init', 'enc_seed_default_club_events', 35 );
 
 function enc_register_post_types() {
 	$common = array( 'show_in_rest' => true, 'map_meta_cap' => true );
@@ -106,7 +104,7 @@ function enc_register_post_types() {
 		'show_ui'         => true,
 		'show_in_rest'    => false,
 		'menu_icon'       => 'dashicons-lightbulb',
-		'supports'        => array( 'title', 'editor', 'author' ),
+		'supports'        => array( 'title', 'editor', 'thumbnail', 'author' ),
 		'map_meta_cap'    => true,
 		'capability_type' => array( 'en_proposal', 'en_proposals' ),
 		'capabilities'    => array( 'create_posts' => 'create_en_proposals' ),
@@ -133,6 +131,14 @@ function enc_register_post_types() {
 		'capability_type' => 'post',
 		'map_meta_cap'    => true,
 	) ) );
+
+	register_post_type( 'faculty_department', array(
+		'labels' => array( 'name' => 'Departments', 'singular_name' => 'Department', 'add_new_item' => 'Add department', 'edit_item' => 'Edit department', 'menu_name' => 'Departments' ),
+		'public' => false, 'publicly_queryable' => false, 'show_ui' => true, 'show_in_rest' => false,
+		'show_in_menu' => 'users.php', 'supports' => array( 'title' ), 'map_meta_cap' => true,
+		'capability_type' => array( 'en_department', 'en_departments' ),
+		'capabilities' => array( 'create_posts' => 'create_en_departments' ),
+	) );
 
 	register_taxonomy( 'event_type', 'event', array(
 		'labels' => array( 'name' => 'Event types', 'singular_name' => 'Event type' ),
@@ -218,6 +224,12 @@ add_action( 'save_post_event', function ( $post_id ) {
 	foreach ( enc_event_fields() as $key => $f ) {
 		$raw = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : '';
 		if ( $f[1] === 'select' && ! isset( $f[2][ $raw ] ) ) $raw = '';
+		if ( $key === '_en_club' && ! current_user_can( 'manage_options' ) && function_exists( 'enc_user_is_faculty_scope_role' ) && enc_user_is_faculty_scope_role( get_current_user_id() ) ) {
+			$user_department = enc_user_department_id( get_current_user_id() );
+			$target_club = absint( $raw );
+			$target_department = $target_club ? absint( get_post_meta( $target_club, '_en_department', true ) ) : 0;
+			if ( ! $user_department || ( $target_department && $target_department !== $user_department ) ) $raw = get_post_meta( $post_id, '_en_club', true );
+		}
 		update_post_meta( $post_id, $key, enc_sanitize_field( $f[1], $raw ) );
 	}
 } );
@@ -230,17 +242,29 @@ add_action( 'add_meta_boxes', function () {
 function enc_club_box( $post ) {
 	wp_nonce_field( 'enc_club_save', 'enc_club_nonce' );
 	echo '<p><label>Faculty incharge</label><br>';
-	wp_dropdown_users( array( 'role__in' => array( 'en_faculty' ), 'name' => '_en_club_faculty', 'selected' => (int) get_post_meta( $post->ID, '_en_club_faculty', true ), 'show_option_none' => 'None', 'option_none_value' => '0' ) );
-	echo '</p><p><label>Club head</label><br>';
-	wp_dropdown_users( array( 'role__in' => array( 'en_club_head' ), 'name' => '_en_club_head', 'selected' => (int) get_post_meta( $post->ID, '_en_club_head', true ), 'show_option_none' => 'None', 'option_none_value' => '0' ) );
-	echo '</p>';
+	$club_department = absint( get_post_meta( $post->ID, '_en_department', true ) );
+	$staff = get_users( array( 'role__in' => array( 'en_faculty', 'en_faculty_head' ), 'number' => 500, 'orderby' => 'display_name', 'order' => 'ASC' ) );
+	echo '<select name="_en_club_faculty" class="widefat"><option value="0">None</option>';
+	foreach ( $staff as $faculty ) {
+		if ( $club_department && enc_user_department_id( $faculty->ID ) !== $club_department ) continue;
+		echo '<option value="' . esc_attr( $faculty->ID ) . '"' . selected( (int) get_post_meta( $post->ID, '_en_club_faculty', true ), (int) $faculty->ID, false ) . '>' . esc_html( $faculty->display_name ) . '</option>';
+	}
+	echo '</select>';
+	$head = get_userdata( (int) get_post_meta( $post->ID, '_en_club_head', true ) );
+	echo '</p><p><strong>Club Head</strong><br>' . esc_html( $head ? $head->display_name : 'Vacant' ) . '</p><p><a href="' . esc_url( admin_url( 'edit.php?post_type=club&page=enc-club-leadership' ) ) . '">Change Club Head</a></p>';
 }
 
 add_action( 'save_post_club', function ( $post_id ) {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
 	if ( ! isset( $_POST['enc_club_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['enc_club_nonce'] ) ), 'enc_club_save' ) ) return;
 	if ( ! current_user_can( 'edit_post', $post_id ) ) return;
-	foreach ( array( '_en_club_faculty', '_en_club_head' ) as $k ) update_post_meta( $post_id, $k, isset( $_POST[ $k ] ) ? absint( $_POST[ $k ] ) : 0 );
+	if ( isset( $_POST['_en_club_faculty'] ) ) {
+		$faculty_id = absint( $_POST['_en_club_faculty'] );
+		$faculty = $faculty_id ? get_userdata( $faculty_id ) : false;
+		$department_id = absint( get_post_meta( $post_id, '_en_department', true ) );
+		if ( ! $faculty || ( ! in_array( 'en_faculty', (array) $faculty->roles, true ) && ! in_array( 'en_faculty_head', (array) $faculty->roles, true ) ) || ( $department_id && enc_user_department_id( $faculty_id ) !== $department_id ) ) $faculty_id = 0;
+		update_post_meta( $post_id, '_en_club_faculty', $faculty_id );
+	}
 } );
 
 /** Derived event state: cancelled / completed / ongoing / registration_closed / registration_open. */
@@ -249,6 +273,7 @@ function enc_event_state( $event_id ) {
 	$today = wp_date( 'Y-m-d' );
 	$date  = (string) get_post_meta( $event_id, '_en_date', true );
 	$dead  = (string) get_post_meta( $event_id, '_en_deadline', true );
+	if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $date, $parts ) || ! checkdate( (int) $parts[2], (int) $parts[3], (int) $parts[1] ) ) return 'unscheduled';
 	if ( $date && $date < $today ) return 'completed';
 	if ( $date && $date === $today ) return 'ongoing';
 	if ( $dead && $dead < $today ) return 'registration_closed';

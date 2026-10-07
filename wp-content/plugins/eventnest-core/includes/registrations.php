@@ -11,6 +11,20 @@ function enc_is_registered( $event_id, $user_id ) {
 	return (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . enc_table( 'registrations' ) . " WHERE event_id = %d AND user_id = %d AND status <> 'cancelled'", $event_id, $user_id ) );
 }
 
+function enc_registration_lock_name( $event_id, $user_id ) {
+	return 'enc_reg_' . substr( hash( 'sha256', absint( $event_id ) . ':' . absint( $user_id ) ), 0, 32 );
+}
+
+function enc_registration_acquire_lock( $event_id, $user_id ) {
+	global $wpdb;
+	return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', enc_registration_lock_name( $event_id, $user_id ) ) ) === 1;
+}
+
+function enc_registration_release_lock( $event_id, $user_id ) {
+	global $wpdb;
+	$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', enc_registration_lock_name( $event_id, $user_id ) ) );
+}
+
 /** Checks shared by individual and team sign-ups. Returns WP_Error or true. */
 function enc_can_register( $event_id, $user_id ) {
 	$event = get_post( $event_id );
@@ -26,31 +40,41 @@ function enc_register( $event_id, $user_id, $team_id = 0 ) {
 	global $wpdb;
 	$ok = enc_can_register( $event_id, $user_id );
 	if ( is_wp_error( $ok ) ) return $ok;
+	if ( ! enc_registration_acquire_lock( $event_id, $user_id ) ) return new WP_Error( 'duplicate', 'A registration for this event is already being processed.' );
+	try {
+		$ok = enc_can_register( $event_id, $user_id );
+		if ( is_wp_error( $ok ) ) return $ok;
 
-	$table = enc_table( 'registrations' );
-	// A cancelled row for the same person is reused rather than hitting the unique key.
-	$wpdb->query( $wpdb->prepare( "DELETE FROM $table WHERE event_id = %d AND user_id = %d AND status = 'cancelled'", $event_id, $user_id ) );
-	$inserted = $wpdb->insert( $table, array( 'event_id' => $event_id, 'user_id' => $user_id, 'team_id' => (int) $team_id, 'status' => 'registered', 'created_at' => current_time( 'mysql', true ) ), array( '%d', '%d', '%d', '%s', '%s' ) );
-	if ( ! $inserted ) return new WP_Error( 'db', 'Could not save your registration.' );
-	$id = (int) $wpdb->insert_id;
+		$table = enc_table( 'registrations' );
+		$inserted = $wpdb->insert( $table, array( 'event_id' => $event_id, 'user_id' => $user_id, 'team_id' => (int) $team_id, 'status' => 'registered', 'created_at' => current_time( 'mysql', true ) ), array( '%d', '%d', '%d', '%s', '%s' ) );
+		if ( ! $inserted ) return new WP_Error( 'db', 'Could not save your registration.' );
+		$id = (int) $wpdb->insert_id;
 
-	$max = (int) get_post_meta( $event_id, '_en_max', true );
-	if ( $max > 0 ) {
-		$rank = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE event_id = %d AND status IN ('registered','pending','completed') AND id <= %d", $event_id, $id ) );
-		if ( $rank > $max ) {
-			$wpdb->delete( $table, array( 'id' => $id ), array( '%d' ) );
-			return new WP_Error( 'full', 'This event is full.' );
+		$max = (int) get_post_meta( $event_id, '_en_max', true );
+		if ( $max > 0 ) {
+			$rank = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE event_id = %d AND status IN ('registered','pending','completed') AND id <= %d", $event_id, $id ) );
+			if ( $rank > $max ) {
+				$wpdb->delete( $table, array( 'id' => $id ), array( '%d' ) );
+				return new WP_Error( 'full', 'This event is full.' );
+			}
 		}
+		do_action( 'enc_registered', $event_id, $user_id, $id );
+		return $id;
+	} finally {
+		enc_registration_release_lock( $event_id, $user_id );
 	}
-	do_action( 'enc_registered', $event_id, $user_id, $id );
-	return $id;
 }
 
 function enc_cancel_registration( $event_id, $user_id ) {
 	global $wpdb;
-	$n = $wpdb->update( enc_table( 'registrations' ), array( 'status' => 'cancelled' ), array( 'event_id' => $event_id, 'user_id' => $user_id ), array( '%s' ), array( '%d', '%d' ) );
-	if ( $n ) do_action( 'enc_registration_cancelled', $event_id, $user_id );
-	return (bool) $n;
+	if ( ! enc_registration_acquire_lock( $event_id, $user_id ) ) return false;
+	try {
+		$n = $wpdb->update( enc_table( 'registrations' ), array( 'status' => 'cancelled' ), array( 'event_id' => $event_id, 'user_id' => $user_id, 'status' => 'registered' ), array( '%s' ), array( '%d', '%d', '%s' ) );
+		if ( $n ) do_action( 'enc_registration_cancelled', $event_id, $user_id );
+		return (bool) $n;
+	} finally {
+		enc_registration_release_lock( $event_id, $user_id );
+	}
 }
 
 /** Team sign-up. The leader is added automatically; $member_ids are the other students. All-or-nothing. */

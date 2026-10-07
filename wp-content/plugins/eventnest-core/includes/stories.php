@@ -39,7 +39,7 @@ function enc_story_notice() {
 	$code = isset( $_GET['story_result'] ) ? sanitize_key( wp_unslash( $_GET['story_result'] ) ) : '';
 	$messages = array(
 		'submitted' => array( 'Your story was submitted and is waiting for review.', 'success' ),
-		'error'     => array( 'We could not submit your story. Check the required fields and try again.', 'error' ),
+		'error'     => array( 'We could not submit your story. Check the required fields and use a JPG, PNG, GIF, or WebP photo smaller than 5 MB.', 'error' ),
 	);
 	if ( ! isset( $messages[ $code ] ) ) return '';
 	return '<p class="en-auth__notice en-auth__notice--' . esc_attr( $messages[ $code ][1] ) . '" role="status">' . esc_html( $messages[ $code ][0] ) . '</p>';
@@ -61,13 +61,19 @@ function enc_handle_story_submission() {
 	$favourite = isset( $_POST['story_favourite'] ) ? sanitize_textarea_field( wp_unslash( $_POST['story_favourite'] ) ) : '';
 	$learned = isset( $_POST['story_learned'] ) ? sanitize_textarea_field( wp_unslash( $_POST['story_learned'] ) ) : '';
 	if ( ! $title || ! $content || ! $event || ! $course || ! $year || $rating < 1 || $rating > 5 ) enc_story_return( 'share-story', 'error' );
+	$image_id = enc_receive_student_image( 'story_image' );
+	if ( is_wp_error( $image_id ) ) enc_story_return( 'share-story', 'error' );
 
 	$user_id = get_current_user_id();
 	$story_id = wp_insert_post( array(
 		'post_type' => 'student_story', 'post_status' => 'pending', 'post_title' => $title,
 		'post_content' => $content, 'post_author' => $user_id,
 	), true );
-	if ( is_wp_error( $story_id ) ) enc_story_return( 'share-story', 'error' );
+	if ( is_wp_error( $story_id ) ) {
+		if ( $image_id ) wp_delete_attachment( $image_id, true );
+		enc_story_return( 'share-story', 'error' );
+	}
+	if ( $image_id ) enc_attach_student_image( $image_id, $story_id );
 	foreach ( array(
 		'_en_story_event' => $event,
 		'_en_story_course' => $course,
@@ -131,11 +137,12 @@ function enc_submit_story_shortcode() {
 	$user_id = get_current_user_id();
 	$course = get_user_meta( $user_id, '_en_course', true );
 	$out = '<section class="en-auth-card en-story-form-card"><p class="eyebrow eyebrow--small">EVENTNEST STORIES</p><h1>Share your experience</h1><p class="muted">Tell other students about a campus event or moment. Stories are reviewed before they appear publicly.</p>' . enc_story_notice();
-	$out .= '<form class="en-auth en-story-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_submit_story">' . wp_nonce_field( 'enc_submit_story', 'enc_story_nonce', true, false );
+	$out .= '<form class="en-auth en-story-form" method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_submit_story">' . wp_nonce_field( 'enc_submit_story', 'enc_story_nonce', true, false );
 	$out .= '<label class="en-auth__field"><span>Story title *</span><input required maxlength="180" name="story_title"></label>';
 	$out .= '<label class="en-auth__field"><span>Your experience *</span><textarea required name="story_content" rows="9" maxlength="12000" placeholder="What happened? What made the experience meaningful?"></textarea></label>';
 	$out .= '<div class="en-auth__row"><label class="en-auth__field"><span>Event or experience *</span><input required maxlength="160" name="story_event"></label><label class="en-auth__field"><span>Rating *</span><select required name="story_rating"><option value="">Choose a rating</option><option value="5">5 — Loved it</option><option value="4">4 — Great</option><option value="3">3 — Good</option><option value="2">2 — Fair</option><option value="1">1 — Needs improvement</option></select></label></div>';
 	$out .= '<div class="en-auth__row"><label class="en-auth__field"><span>Course *</span><input required maxlength="100" name="story_course" value="' . esc_attr( $course ) . '"></label><label class="en-auth__field"><span>Year of study *</span><input required maxlength="60" name="story_year" placeholder="e.g. 4th Year"></label></div>';
+	$out .= '<label class="en-auth__field"><span>Story photo <small>(optional, JPG, PNG, GIF, or WebP; max 5 MB)</small></span><input type="file" name="story_image" accept="image/jpeg,image/png,image/gif,image/webp"></label>';
 	$out .= '<label class="en-auth__field"><span>Favourite moment <small>(optional)</small></span><textarea name="story_favourite" rows="3" maxlength="2000"></textarea></label><label class="en-auth__field"><span>What I learned <small>(optional)</small></span><textarea name="story_learned" rows="3" maxlength="2000"></textarea></label>';
 	$out .= '<p class="muted en-story-privacy">Your name, course, year, rating, and story will be visible to visitors if the story is approved.</p><button class="btn btn--brand" type="submit">Submit story for review</button></form></section>';
 	return $out;

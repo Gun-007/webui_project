@@ -13,7 +13,7 @@ function enc_student_notice( $code ) {
 		'cancelled' => array( 'Your registration was cancelled.', 'success' ),
 		'proposal_submitted' => array( 'Your proposal was submitted for review.', 'success' ),
 		'proposal_resubmitted' => array( 'Your revised proposal was sent for review.', 'success' ),
-		'proposal_error' => array( 'We could not submit that proposal. Check the required fields and try again.', 'error' ),
+		'proposal_error' => array( 'We could not submit that proposal. Check the required fields and use a JPG, PNG, GIF, or WebP photo smaller than 5 MB.', 'error' ),
 		'registration_error' => array( 'We could not complete that registration. It may be closed, full, or already registered.', 'error' ),
 		'cancel_error' => array( 'We could not cancel that registration. It may already be closed or belong to another account.', 'error' ),
 	);
@@ -110,6 +110,7 @@ function enc_proposal_form_data() {
 		'participants' => isset( $_POST['proposal_participants'] ) ? wp_unslash( $_POST['proposal_participants'] ) : 0,
 		'venue' => isset( $_POST['proposal_venue'] ) ? wp_unslash( $_POST['proposal_venue'] ) : '',
 		'club' => isset( $_POST['proposal_club'] ) ? wp_unslash( $_POST['proposal_club'] ) : 0,
+		'department' => isset( $_POST['proposal_department'] ) ? wp_unslash( $_POST['proposal_department'] ) : 0,
 	);
 }
 
@@ -118,8 +119,15 @@ function enc_handle_proposal_submission() {
 	if ( ! current_user_can( 'en_submit_proposal' ) ) wp_die( esc_html__( 'Your account cannot submit proposals.', 'eventnest-core' ), '', array( 'response' => 403 ) );
 	$nonce = isset( $_POST['enc_proposal_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['enc_proposal_nonce'] ) ) : '';
 	if ( ! wp_verify_nonce( $nonce, 'enc_submit_proposal' ) ) enc_student_return( home_url( '/submit-proposal/' ), 'en_result', 'proposal_error' );
+	$image_id = enc_receive_student_image( 'proposal_image' );
+	if ( is_wp_error( $image_id ) ) enc_student_return( home_url( '/submit-proposal/' ), 'en_result', 'proposal_error' );
 	$result = enc_proposal_create( get_current_user_id(), enc_proposal_form_data() );
-	if ( is_wp_error( $result ) ) enc_student_return( home_url( '/submit-proposal/' ), 'en_result', 'proposal_error' );
+	if ( is_wp_error( $result ) ) {
+		if ( $image_id ) wp_delete_attachment( $image_id, true );
+		enc_student_return( home_url( '/submit-proposal/' ), 'en_result', 'proposal_error' );
+	}
+	if ( $image_id ) enc_attach_student_image( $image_id, $result );
+	enc_log_proposal_revision( $result, get_current_user_id(), 'submitted', enc_proposal_snapshot( $result ) );
 	enc_student_return( home_url( '/my-proposals/' ), 'en_result', 'proposal_submitted' );
 }
 
@@ -129,8 +137,15 @@ function enc_handle_proposal_resubmission() {
 	if ( ! $user_id || ! current_user_can( 'en_submit_proposal' ) ) wp_die( esc_html__( 'Your account cannot resubmit proposals.', 'eventnest-core' ), '', array( 'response' => 403 ) );
 	$nonce = isset( $_POST['enc_proposal_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['enc_proposal_nonce'] ) ) : '';
 	if ( ! wp_verify_nonce( $nonce, 'enc_resubmit_proposal_' . $proposal_id ) ) enc_student_return( home_url( '/my-proposals/' ), 'en_result', 'proposal_error' );
+	$image_id = enc_receive_student_image( 'proposal_image' );
+	if ( is_wp_error( $image_id ) ) enc_student_return( home_url( '/my-proposals/' ), 'en_result', 'proposal_error' );
 	$result = enc_proposal_resubmit( $proposal_id, $user_id, enc_proposal_form_data() );
-	if ( is_wp_error( $result ) ) enc_student_return( home_url( '/my-proposals/' ), 'en_result', 'proposal_error' );
+	if ( is_wp_error( $result ) ) {
+		if ( $image_id ) wp_delete_attachment( $image_id, true );
+		enc_student_return( home_url( '/my-proposals/' ), 'en_result', 'proposal_error' );
+	}
+	if ( $image_id ) enc_attach_student_image( $image_id, $proposal_id );
+	enc_log_proposal_revision( $proposal_id, $user_id, 'resubmitted', enc_proposal_snapshot( $proposal_id ) );
 	enc_student_return( home_url( '/my-proposals/' ), 'en_result', 'proposal_resubmitted' );
 }
 
@@ -142,7 +157,7 @@ function enc_proposal_form( $proposal = null ) {
 		if ( ! $proposal ) return '';
 		return $meta ? get_post_meta( $proposal->ID, $meta, true ) : $proposal->$key;
 	};
-	$out = '<form class="en-auth en-proposal-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="' . esc_attr( $action ) . '">';
+	$out = '<form class="en-auth en-proposal-form" method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="' . esc_attr( $action ) . '">';
 	if ( $proposal ) $out .= '<input type="hidden" name="proposal_id" value="' . esc_attr( $id ) . '">';
 	$out .= wp_nonce_field( $proposal ? 'enc_resubmit_proposal_' . $id : 'enc_submit_proposal', 'enc_proposal_nonce', true, false );
 	$out .= '<label class="en-auth__field"><span>Event title *</span><input required name="proposal_title" maxlength="180" value="' . esc_attr( $value( 'post_title' ) ) . '"></label>';
@@ -158,7 +173,10 @@ function enc_proposal_form( $proposal = null ) {
 	$out .= '<div class="en-auth__row"><label class="en-auth__field"><span>Venue *</span><input required name="proposal_venue" value="' . esc_attr( $value( '', '_en_p_venue' ) ) . '"></label><label class="en-auth__field"><span>Organizing club</span><select name="proposal_club"><option value="0">No club selected</option>';
 	$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => 'publish', 'numberposts' => 100, 'orderby' => 'title', 'order' => 'ASC' ) );
 	foreach ( $clubs as $club ) $out .= '<option value="' . esc_attr( $club->ID ) . '"' . selected( (int) $value( '', '_en_p_club' ), (int) $club->ID, false ) . '>' . esc_html( $club->post_title ) . '</option>';
-	$out .= '</select></label></div><button class="btn btn--brand" type="submit">' . esc_html( $submit_label ) . '</button></form>';
+	$out .= '</select></label><label class="en-auth__field"><span>Department *</span><select required name="proposal_department">' . enc_required_department_choices( (int) $value( '', '_en_department' ) ) . '</select><small>Club proposals inherit their club’s department.</small></label></div>';
+	if ( $proposal && has_post_thumbnail( $proposal ) ) $out .= '<div class="en-proposal-image-current"><span class="muted">Current proposal photo</span>' . get_the_post_thumbnail( $proposal, 'thumbnail' ) . '</div>';
+	$out .= '<label class="en-auth__field"><span>Event photo <small>(optional, JPG, PNG, GIF, or WebP; max 5 MB' . ( $proposal && has_post_thumbnail( $proposal ) ? '; uploading replaces the current photo' : '' ) . ')</small></span><input type="file" name="proposal_image" accept="image/jpeg,image/png,image/gif,image/webp"></label>';
+	$out .= '<button class="btn btn--brand" type="submit">' . esc_html( $submit_label ) . '</button></form>';
 	return $out;
 }
 
@@ -185,6 +203,24 @@ function enc_my_proposals_shortcode() {
 				$reviewer = get_userdata( (int) $entry->reviewer_id );
 				$out .= '<li><strong>' . esc_html( ucwords( str_replace( '_', ' ', $entry->decision ) ) ) . '</strong> · ' . esc_html( $entry->stage ) . ' · ' . esc_html( $reviewer ? $reviewer->display_name : 'EventNest' ) . ' · ' . esc_html( get_date_from_gmt( $entry->created_at, 'j M Y' ) );
 				if ( $entry->comment ) $out .= '<p>' . esc_html( $entry->comment ) . '</p>';
+				$out .= '</li>';
+			}
+			$out .= '</ol></details>';
+		}
+		$revisions = enc_proposal_revisions( $id );
+		if ( $revisions ) {
+			$out .= '<details class="en-proposal-history"><summary>Submitted versions</summary><ol>';
+			foreach ( $revisions as $revision ) {
+				$snapshot = json_decode( $revision->snapshot, true );
+				$snapshot = is_array( $snapshot ) ? $snapshot : array();
+				$out .= '<li><strong>Version ' . esc_html( $revision->revision ) . '</strong> · ' . esc_html( ucfirst( str_replace( '_', ' ', $revision->action ) ) ) . ' · ' . esc_html( get_date_from_gmt( $revision->created_at, 'j M Y, g:i a' ) );
+				if ( ! empty( $snapshot['title'] ) ) $out .= '<p><strong>' . esc_html( $snapshot['title'] ) . '</strong></p>';
+				if ( ! empty( $snapshot['description'] ) ) $out .= '<p>' . esc_html( wp_trim_words( $snapshot['description'], 45 ) ) . '</p>';
+				$version_details = array();
+				if ( ! empty( $snapshot['date'] ) ) $version_details[] = 'Proposed date: ' . $snapshot['date'];
+				if ( ! empty( $snapshot['venue'] ) ) $version_details[] = 'Venue: ' . $snapshot['venue'];
+				if ( $version_details ) $out .= '<p>' . esc_html( implode( ' · ', $version_details ) ) . '</p>';
+				if ( ! empty( $snapshot['image_id'] ) && wp_attachment_is_image( (int) $snapshot['image_id'] ) ) $out .= '<p>' . wp_get_attachment_image( (int) $snapshot['image_id'], 'thumbnail' ) . '</p>';
 				$out .= '</li>';
 			}
 			$out .= '</ol></details>';
