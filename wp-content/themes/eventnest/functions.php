@@ -1,7 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.2.6' );
+define( 'EN_VERSION', '1.2.7' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/demo-events.php';
@@ -51,6 +51,7 @@ function en_fallback_menu() {
 		__( 'Events', 'eventnest' )       => get_post_type_archive_link( 'event' ),
 		__( 'Competitions', 'eventnest' ) => home_url( '/competitions/' ),
 		__( 'Clubs', 'eventnest' )        => home_url( '/clubs/' ),
+		__( 'Student Stories', 'eventnest' ) => get_post_type_archive_link( 'student_story' ) ?: home_url( '/student-stories/' ),
 		__( 'Proposals', 'eventnest' )    => $proposals_url,
 		__( 'About', 'eventnest' )        => home_url( '/about/' ),
 	);

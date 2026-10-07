@@ -13,6 +13,11 @@ WordPress Admin → Appearance → Themes → Add New → Upload Theme → choos
 7. Appearance → Menus: create a menu and assign it to **Primary menu** if you want custom navigation. The theme has fallback navigation if no menu is created.
 8. Appearance → Customize → EventNest settings: set the homepage subtitle, login link, hero image and footer text.
 
+## Student Stories
+- The public archive is `/student-stories/`; it is provided by EventNest Core and the theme's `archive-student_story.php` template.
+- EventNest Core creates **Share Your Story** and **My Stories** pages automatically. Students can submit stories for administrator review; only published stories appear publicly.
+- Add **Student Stories** and **Share Your Story** to a custom Primary menu if you use one. Fallback navigation includes Student Stories automatically.
+
 ## Notes
 - Events with no date or a date in the past are hidden from listings.
 - The event archive supports text search, city, category, date range and free-event filters.

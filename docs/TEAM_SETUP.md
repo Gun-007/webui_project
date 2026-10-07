@@ -61,6 +61,8 @@ Publish each page. The About page must use the slug `about`; it does not need a 
 
 The **My Clubs** page is created automatically if it does not already exist.
 
+EventNest Core also creates **Share Your Story** (`/share-story/`) and **My Stories** (`/my-stories/`) automatically. The public **Student Stories** archive is `/student-stories/` and needs no WordPress Page. Add Student Stories and Share Your Story to a custom navigation menu if you are not using the theme's fallback menu.
+
 ## 5. Create users and assign reviewer roles
 
 - Students can use **Register Student**. Their unique PRN can be used to log in.
@@ -84,6 +86,12 @@ The Competitions page lists upcoming published events marked as Competition and 
 - Students apply from an individual club page. Their pending applications appear on that page only to its assigned Club Head, Faculty in-charge, and Administrators. After approval, the student must sign in to the same account to see **You are a member of this club** and the updated member count; the status also appears under **Dashboard → My Clubs**. Reviewers return to the club's application queue and should not see the student application form. Club membership data is stored locally with the WordPress database.
 
 Only published upcoming events appear in event listings. An approved proposal initially creates a draft event and will not appear until staff complete and publish it.
+
+## Student stories
+
+- Signed-in students submit an experience from **Share Your Story**. Each submission includes its title, story text, event, rating, course, year of study, and optional favourite moment and lesson learned.
+- Submissions are private while pending. Administrators review them under **Student Stories** in WordPress Admin and publish approved stories. Published entries appear at `/student-stories/` and their story detail pages.
+- Students can check submission status in **My Stories**. The author name and submitted profile/story details are public after approval, so students should avoid putting private information in their story.
 
 ## 7. Try the proposal approval flow
 

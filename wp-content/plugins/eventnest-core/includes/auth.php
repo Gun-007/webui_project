@@ -234,6 +234,7 @@ function enc_dashboard_shortcode() {
 			$stats = enc_student_stats( $user->ID );
 			$out .= '<div class="en-student-stats"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['registered'] ) ) . '</strong><span>Registrations</span></a><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['upcoming'] ) ) . '</strong><span>Upcoming</span></a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '"><strong>' . esc_html( number_format_i18n( $stats['proposals'] ) ) . '</strong><span>Proposals</span></a></div><p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-registrations/' ) ) . '">My Registrations</a><a href="' . esc_url( home_url( '/my-proposals/' ) ) . '">My Proposals</a><a href="' . esc_url( home_url( '/my-clubs/' ) ) . '">My Clubs</a><a href="' . esc_url( home_url( '/submit-proposal/' ) ) . '">Propose an event</a></p>';
 		}
+		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/my-stories/' ) ) . '">My Stories</a><a href="' . esc_url( home_url( '/share-story/' ) ) . '">Share your story</a></p>';
 	}
 	if ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) {
 		$out .= '<p class="en-dashboard__links"><a href="' . esc_url( home_url( '/review-proposals/' ) ) . '">Review Proposals</a></p>';

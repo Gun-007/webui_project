@@ -2,13 +2,13 @@
 /**
  * Plugin Name: EventNest Core
  * Description: Data model, roles, proposal approval workflow and event registration for the EventNest college portal.
- * Version: 0.5.0
+ * Version: 0.6.0
  * Requires PHP: 7.4
  * Text Domain: eventnest-core
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ENC_VERSION', '0.5.0' );
+define( 'ENC_VERSION', '0.6.0' );
 define( 'ENC_DB_VERSION', '2' );
 define( 'ENC_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -22,6 +22,7 @@ require_once ENC_DIR . 'includes/student-portal.php';
 require_once ENC_DIR . 'includes/review-portal.php';
 require_once ENC_DIR . 'includes/registration-admin.php';
 require_once ENC_DIR . 'includes/club-memberships.php';
+require_once ENC_DIR . 'includes/stories.php';
 
 register_activation_hook( __FILE__, 'enc_activate' );
 

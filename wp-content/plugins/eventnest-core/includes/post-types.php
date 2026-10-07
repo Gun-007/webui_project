@@ -123,6 +123,17 @@ function enc_register_post_types() {
 		'capabilities'    => array( 'create_posts' => 'create_en_announcements' ),
 	) ) );
 
+	register_post_type( 'student_story', array_merge( $common, array(
+		'labels'          => array( 'name' => 'Student Stories', 'singular_name' => 'Student Story', 'add_new_item' => 'Add student story', 'edit_item' => 'Edit student story', 'view_item' => 'View student story', 'all_items' => 'All student stories' ),
+		'public'          => true,
+		'has_archive'     => 'student-stories',
+		'rewrite'         => array( 'slug' => 'student-stories' ),
+		'menu_icon'       => 'dashicons-format-quote',
+		'supports'        => array( 'title', 'editor', 'thumbnail', 'excerpt', 'author' ),
+		'capability_type' => 'post',
+		'map_meta_cap'    => true,
+	) ) );
+
 	register_taxonomy( 'event_type', 'event', array(
 		'labels' => array( 'name' => 'Event types', 'singular_name' => 'Event type' ),
 		'hierarchical' => true, 'show_in_rest' => true, 'show_admin_column' => true,
