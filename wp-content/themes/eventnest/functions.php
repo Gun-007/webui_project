@@ -1,10 +1,13 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.1.0' );
+define( 'EN_VERSION', '1.2.8' );
 
 require_once get_template_directory() . '/inc/events.php';
+require_once get_template_directory() . '/inc/demo-events.php';
+require_once get_template_directory() . '/inc/demo-events.php';
 require_once get_template_directory() . '/inc/customizer.php';
+require_once get_template_directory() . '/inc/clubs.php';
 
 add_action( 'after_setup_theme', function () {
 	load_theme_textdomain( 'eventnest', get_template_directory() . '/languages' );
@@ -41,12 +44,15 @@ add_action( 'wp_head', function () {
 
 function en_fallback_menu() {
 	echo '<ul class="menu">';
+	$can_review_proposals = is_user_logged_in() && ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) );
+	$proposals_url = ! is_user_logged_in() ? home_url( '/submit-proposal/' ) : ( $can_review_proposals ? home_url( '/review-proposals/' ) : home_url( '/my-proposals/' ) );
 	$links = array(
 		__( 'Home', 'eventnest' )         => home_url( '/' ),
 		__( 'Events', 'eventnest' )       => get_post_type_archive_link( 'event' ),
 		__( 'Competitions', 'eventnest' ) => home_url( '/competitions/' ),
 		__( 'Clubs', 'eventnest' )        => home_url( '/clubs/' ),
-		__( 'Proposals', 'eventnest' )    => home_url( '/proposals/' ),
+		__( 'Student Stories', 'eventnest' ) => get_post_type_archive_link( 'student_story' ) ?: home_url( '/student-stories/' ),
+		__( 'Proposals', 'eventnest' )    => $proposals_url,
 		__( 'About', 'eventnest' )        => home_url( '/about/' ),
 	);
 	foreach ( $links as $label => $url ) {
