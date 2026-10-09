@@ -15,7 +15,22 @@ function enc_proposal_statuses() {
 
 function enc_proposal_status( $id ) {
 	$s = get_post_meta( $id, '_en_status', true );
+	$event_id = absint( get_post_meta( $id, '_en_event_id', true ) );
+	if ( $event_id && get_post_type( $event_id ) === 'event' && get_post_status( $event_id ) === 'publish' && $s !== 'published' ) {
+		enc_proposal_mark_published( $id, 0 );
+		$s = 'published';
+	}
 	return $s ? $s : 'submitted';
+}
+
+/** Keep proposal status aligned when its event is already public or is published later. */
+function enc_proposal_mark_published( $proposal_id, $actor_id = null ) {
+	if ( get_post_meta( $proposal_id, '_en_status', true ) === 'published' ) return false;
+	update_post_meta( $proposal_id, '_en_status', 'published' );
+	$actor_id = null === $actor_id ? get_current_user_id() : absint( $actor_id );
+	enc_log_approval( $proposal_id, 'event', $actor_id, 'published' );
+	do_action( 'enc_proposal_status_changed', $proposal_id, 'published', $actor_id, '' );
+	return true;
 }
 
 function enc_log_approval( $proposal_id, $stage, $reviewer_id, $decision, $comment = '' ) {
@@ -205,22 +220,34 @@ function enc_proposal_decide( $proposal_id, $reviewer_id, $decision, $comment = 
 		elseif ( $decision === 'changes' ) $status = 'needs_changes';
 		elseif ( $i + 1 < count( $chain ) ) { $status = 'under_review'; update_post_meta( $proposal_id, '_en_stage', $i + 1 ); }
 		else $status = 'approved';
-		update_post_meta( $proposal_id, '_en_status', $status );
+		if ( $status === 'approved' ) {
+			$event_id = enc_proposal_make_event( $proposal_id );
+			if ( is_wp_error( $event_id ) ) return $event_id;
+			$status = 'published';
+		}
+		$previous_status = get_post_meta( $proposal_id, '_en_status', true );
+		if ( $previous_status !== $status ) update_post_meta( $proposal_id, '_en_status', $status );
 		enc_log_approval( $proposal_id, $stage, $reviewer_id, $decision === 'approve' ? 'approved' : ( $decision === 'reject' ? 'rejected' : 'needs_changes' ), $comment );
-		if ( $status === 'approved' ) enc_proposal_make_event( $proposal_id );
-		do_action( 'enc_proposal_status_changed', $proposal_id, $status, $reviewer_id, $comment );
+		if ( $previous_status !== $status ) do_action( 'enc_proposal_status_changed', $proposal_id, $status, $reviewer_id, $comment );
 		return $status;
 	} finally {
 		enc_proposal_release_lock( $proposal_id );
 	}
 }
 
-/** Final approval creates a draft event with the proposal's details; staff then complete and publish it. */
+/** Final approval publishes an event using the proposal's reviewed details. */
 function enc_proposal_make_event( $proposal_id ) {
-	if ( get_post_meta( $proposal_id, '_en_event_id', true ) ) return;
 	$p = get_post( $proposal_id );
-	$event_id = wp_insert_post( array( 'post_type' => 'event', 'post_status' => 'draft', 'post_title' => $p->post_title, 'post_content' => $p->post_content, 'post_author' => $p->post_author ), true );
-	if ( is_wp_error( $event_id ) ) return;
+	if ( ! $p || $p->post_type !== 'proposal' ) return new WP_Error( 'no_proposal', 'Proposal not found.' );
+	$existing_id = absint( get_post_meta( $proposal_id, '_en_event_id', true ) );
+	$existing = $existing_id ? get_post( $existing_id ) : null;
+	if ( $existing && $existing->post_type === 'event' && 'trash' !== $existing->post_status ) $event_id = $existing_id;
+	else $event_id = 0;
+	if ( $existing_id ) delete_post_meta( $proposal_id, '_en_event_id' );
+	if ( ! $event_id ) {
+		$event_id = wp_insert_post( array( 'post_type' => 'event', 'post_status' => 'draft', 'post_title' => $p->post_title, 'post_content' => $p->post_content, 'post_author' => $p->post_author ), true );
+		if ( is_wp_error( $event_id ) ) return $event_id;
+	}
 	$thumbnail_id = get_post_thumbnail_id( $proposal_id );
 	if ( $thumbnail_id ) set_post_thumbnail( $event_id, $thumbnail_id );
 	wp_set_object_terms( $event_id, array( (int) get_post_meta( $proposal_id, '_en_p_type', true ) ), 'event_type' );
@@ -232,15 +259,15 @@ function enc_proposal_make_event( $proposal_id ) {
 	update_post_meta( $event_id, '_en_department', enc_department_for_object( $proposal_id ) );
 	update_post_meta( $event_id, '_en_proposal', $proposal_id );
 	update_post_meta( $proposal_id, '_en_event_id', $event_id );
+	$published = wp_update_post( array( 'ID' => $event_id, 'post_status' => 'publish' ), true );
+	if ( is_wp_error( $published ) ) return $published;
+	if ( get_post_status( $event_id ) !== 'publish' ) return new WP_Error( 'event_not_published', 'The approved event could not be published.' );
+	return $event_id;
 }
 
-/** When staff publish the event created from a proposal, mark the proposal Published. */
+/** When a linked event becomes public, reflect that in its proposal. */
 add_action( 'transition_post_status', function ( $new, $old, $post ) {
 	if ( $post->post_type !== 'event' || $new !== 'publish' || $old === 'publish' ) return;
 	$pid = (int) get_post_meta( $post->ID, '_en_proposal', true );
-	if ( $pid && enc_proposal_status( $pid ) === 'approved' ) {
-		update_post_meta( $pid, '_en_status', 'published' );
-		enc_log_approval( $pid, 'event', get_current_user_id(), 'published' );
-		do_action( 'enc_proposal_status_changed', $pid, 'published', get_current_user_id(), '' );
-	}
+	if ( $pid ) enc_proposal_mark_published( $pid, get_current_user_id() );
 }, 10, 3 );

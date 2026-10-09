@@ -77,7 +77,7 @@ get_header();
 		<ol>
 			<li><strong><?php esc_html_e( 'Students submit proposals', 'eventnest' ); ?></strong><span><?php esc_html_e( 'Event ideas include category, event type, date, venue, and expected participation.', 'eventnest' ); ?></span></li>
 			<li><strong><?php esc_html_e( 'Reviewers make decisions', 'eventnest' ); ?></strong><span><?php esc_html_e( 'Faculty, club heads, and deputy reviewers approve, reject, or request changes with comments.', 'eventnest' ); ?></span></li>
-			<li><strong><?php esc_html_e( 'Admins publish final events', 'eventnest' ); ?></strong><span><?php esc_html_e( 'Approved proposals become draft events that can be completed and opened for registrations.', 'eventnest' ); ?></span></li>
+			<li><strong><?php esc_html_e( 'Approved proposals become events', 'eventnest' ); ?></strong><span><?php esc_html_e( 'After all required reviewers approve, the event appears in Events and opens for registrations.', 'eventnest' ); ?></span></li>
 		</ol>
 	</div>
 </section>

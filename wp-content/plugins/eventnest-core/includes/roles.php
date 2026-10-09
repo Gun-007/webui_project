@@ -28,6 +28,7 @@ function enc_custom_caps() {
 function enc_role_map() {
 	$events_full = enc_cpt_caps( 'en_events' );
 	$events_own  = enc_cpt_caps( 'en_events', true );
+	$clubs_full  = enc_cpt_caps( 'en_clubs' );
 	$ann_full    = enc_cpt_caps( 'en_announcements' );
 	$ann_own     = enc_cpt_caps( 'en_announcements', true );
 	$departments = enc_cpt_caps( 'en_departments' );
@@ -39,7 +40,7 @@ function enc_role_map() {
 		),
 		'en_faculty' => array(
 			'label' => 'Faculty',
-			'caps'  => array_merge( array( 'read', 'upload_files', 'en_review_faculty', 'en_view_registrations' ), $events_full, $ann_own ),
+			'caps'  => array_merge( array( 'read', 'upload_files', 'en_review_faculty' ), $ann_own ),
 		),
 		'en_faculty_head' => array(
 			'label' => 'Faculty Head',
@@ -51,11 +52,11 @@ function enc_role_map() {
 		),
 		'en_deputy_director' => array(
 			'label' => 'Deputy Director',
-			'caps'  => array_merge( array( 'read', 'en_review_deputy', 'en_view_registrations', 'en_view_analytics' ), $ann_full ),
+			'caps'  => array_merge( array( 'read', 'en_review_deputy', 'en_view_registrations', 'en_view_analytics' ), $events_full, $clubs_full, $ann_full ),
 		),
 		'en_director' => array(
 			'label' => 'Director',
-			'caps'  => array_merge( array( 'read', 'en_review_deputy', 'en_review_override', 'en_view_registrations', 'en_view_analytics', 'en_approve_accounts' ), $ann_full ),
+			'caps'  => array_merge( array( 'read', 'en_review_deputy', 'en_review_override', 'en_view_registrations', 'en_view_analytics', 'en_approve_accounts' ), $events_full, $clubs_full, $ann_full ),
 		),
 	);
 }
@@ -89,5 +90,6 @@ function enc_user_role( $user_id = 0 ) {
 	foreach ( array( 'en_director', 'en_deputy_director', 'en_faculty_head', 'en_faculty', 'en_club_head', 'en_student' ) as $r ) {
 		if ( in_array( $r, (array) $user->roles, true ) ) return $r;
 	}
+	if ( in_array( 'subscriber', (array) $user->roles, true ) ) return 'subscriber';
 	return '';
 }
