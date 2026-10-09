@@ -2,14 +2,14 @@
 /**
  * Plugin Name: EventNest Core
  * Description: Data model, roles, proposal approval workflow and event registration for the EventNest college portal.
- * Version: 0.9.0
+ * Version: 0.9.1
  * Requires PHP: 7.4
  * Text Domain: eventnest-core
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ENC_VERSION', '0.9.0' );
-define( 'ENC_DB_VERSION', '5' );
+define( 'ENC_VERSION', '0.9.1' );
+define( 'ENC_DB_VERSION', '6' );
 define( 'ENC_DIR', plugin_dir_path( __FILE__ ) );
 
 require_once ENC_DIR . 'includes/roles.php';

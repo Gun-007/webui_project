@@ -25,7 +25,7 @@ function enc_handle_proposal_review() {
 		wp_safe_redirect( add_query_arg( 'review_result', 'error', home_url( '/review-proposals/' ) ) );
 		exit;
 	}
-	wp_safe_redirect( add_query_arg( 'review_result', 'recorded', home_url( '/review-proposals/' ) ) );
+	wp_safe_redirect( add_query_arg( 'review_result', sanitize_key( $result ), home_url( '/review-proposals/' ) ) );
 	exit;
 }
 
@@ -36,7 +36,9 @@ function enc_review_proposals_shortcode() {
 	$items = get_posts( array( 'post_type' => 'proposal', 'post_status' => 'publish', 'posts_per_page' => 200, 'orderby' => 'date', 'order' => 'ASC' ) );
 	$out = '<section class="section"><div class="wrap"><div class="page-head"><p class="eyebrow eyebrow--small">EVENTNEST WORKFLOW</p><h1>Review Proposals</h1><p class="section__sub">Review each submission at the approval stage assigned to you.</p>';
 	$result = isset( $_GET['review_result'] ) ? sanitize_key( wp_unslash( $_GET['review_result'] ) ) : '';
-	if ( $result === 'recorded' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Your decision has been recorded.</p>';
+	if ( $result === 'under_review' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Approval recorded. The proposal was sent to the next reviewer; the event appears after final approval.</p>';
+	if ( $result === 'published' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Final approval recorded. The event is now published in Events.</p>';
+	if ( in_array( $result, array( 'rejected', 'needs_changes' ), true ) ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Your decision has been recorded.</p>';
 	if ( $result === 'error' ) $out .= '<p class="en-auth__notice en-auth__notice--error" role="status">The decision could not be saved. Refresh and check whether the proposal is still awaiting your review.</p>';
 	$out .= '</div>';
 	$shown = 0;

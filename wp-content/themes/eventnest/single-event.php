@@ -31,6 +31,7 @@ while ( have_posts() ) : the_post();
 			<div class="event__main">
 				<?php if ( $d['cat'] ) : ?><span class="event-category"><?php echo esc_html( $d['cat'] ); ?></span><?php endif; ?>
 				<h1 class="event__title"><?php the_title(); ?></h1>
+				<?php if ( function_exists( 'en_frontend_post_actions' ) ) en_frontend_post_actions( $id ); ?>
 				<?php if ( $org ) : ?><p class="event__by"><?php printf( esc_html__( 'Organized by %s', 'eventnest' ), '<b>' . esc_html( $org ) . '</b>' ); ?></p><?php endif; ?>
 
 				<ul class="facts">
