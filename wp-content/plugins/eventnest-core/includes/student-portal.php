@@ -183,7 +183,7 @@ function enc_proposal_form( $proposal = null ) {
 function enc_submit_proposal_shortcode() {
 	if ( ! is_user_logged_in() ) return '<section class="en-auth-card"><h1>Log in to propose an event</h1><a class="btn btn--brand" href="' . esc_url( home_url( '/login/' ) ) . '">Log in</a></section>';
 	if ( ! current_user_can( 'en_submit_proposal' ) ) return '<section class="en-auth-card"><h1>Student access required</h1><p>Your account cannot submit proposals.</p></section>';
-	return '<section class="en-auth-card"><p class="eyebrow eyebrow--small">SHAPE CAMPUS LIFE</p><h1>Submit an event proposal</h1><p class="muted">Approved proposals become draft events for staff to complete and publish.</p>' . enc_student_notice( isset( $_GET['en_result'] ) ? sanitize_key( wp_unslash( $_GET['en_result'] ) ) : '' ) . enc_proposal_form() . '</section>';
+	return '<section class="en-auth-card"><p class="eyebrow eyebrow--small">SHAPE CAMPUS LIFE</p><h1>Submit an event proposal</h1><p class="muted">After all required reviewers approve, your event is published on the Events page.</p>' . enc_student_notice( isset( $_GET['en_result'] ) ? sanitize_key( wp_unslash( $_GET['en_result'] ) ) : '' ) . enc_proposal_form() . '</section>';
 }
 
 function enc_my_proposals_shortcode() {
@@ -196,6 +196,11 @@ function enc_my_proposals_shortcode() {
 		$status = enc_proposal_status( $id );
 		$labels = enc_proposal_statuses();
 		$out .= '<article class="en-student-card"><div class="en-student-card__main"><p class="en-student-card__status en-student-card__status--' . esc_attr( $status ) . '">' . esc_html( isset( $labels[ $status ] ) ? $labels[ $status ] : $status ) . '</p><h2>' . esc_html( $item->post_title ) . '</h2><p class="muted">Submitted ' . esc_html( get_the_date( 'j M Y', $item ) ) . ' · Proposed date ' . esc_html( get_post_meta( $id, '_en_p_date', true ) ) . '</p>';
+		if ( in_array( $status, array( 'submitted', 'under_review' ), true ) ) {
+			$next_stage = enc_proposal_current_stage( $id );
+			$reviewer_label = 'deputy' === $next_stage ? 'Deputy Director' : ( 'faculty' === $next_stage ? 'Faculty / Club Head' : 'reviewer' );
+			$out .= '<p class="muted">Awaiting ' . esc_html( $reviewer_label ) . ' approval. The event will appear in Events after final approval.</p>';
+		}
 		$history = enc_proposal_history( $id );
 		if ( $history ) {
 			$out .= '<details class="en-proposal-history"><summary>Review history</summary><ol>';
@@ -227,6 +232,7 @@ function enc_my_proposals_shortcode() {
 		}
 		$event_id = (int) get_post_meta( $id, '_en_event_id', true );
 		if ( $status === 'published' && $event_id ) $out .= '<p><a class="link-more" href="' . esc_url( get_permalink( $event_id ) ) . '">View published event →</a></p>';
+		elseif ( $status === 'approved' ) $out .= '<p class="muted">Approved. The event is being prepared for the Events page.</p>';
 		$out .= '</div></article>';
 		if ( $status === 'needs_changes' ) $out .= '<div class="en-resubmit"><h3>Update your proposal</h3>' . enc_proposal_form( $item ) . '</div>';
 	}

@@ -14,6 +14,14 @@ if ( $events_query->have_posts() ) {
 $has_events = ! empty( $events );
 if ( ! $has_events ) {
 	$events = en_sample_events();
+} elseif ( count( $events ) < 4 ) {
+	$used_titles = wp_list_pluck( $events, 'title' );
+	$used_dates = wp_list_pluck( $events, 'date' );
+	$fillers = array_values( array_filter( en_sample_events(), static function ( $sample ) use ( $used_titles, $used_dates ) {
+		return ! in_array( $sample['title'], $used_titles, true ) && ! in_array( $sample['date'], $used_dates, true );
+	} ) );
+	$events = array_merge( $events, array_slice( $fillers, 0, 4 - count( $events ) ) );
+	usort( $events, static function ( $a, $b ) { return strcmp( $a['date'], $b['date'] ); } );
 }
 
 $closing_query = new WP_Query( array(

@@ -140,6 +140,7 @@ function en_card_data( $id ) {
 	$cat  = en_first_term( $id, 'event_category' );
 	$city = en_first_term( $id, 'event_city' );
 	return array(
+		'id'     => $id,
 		'url'    => get_permalink( $id ),
 		'title'  => get_the_title( $id ),
 		'img'    => has_post_thumbnail( $id ) ? get_the_post_thumbnail( $id, 'en-card', array( 'loading' => 'lazy' ) ) : '',
@@ -156,21 +157,80 @@ function en_card_data( $id ) {
 	);
 }
 
+/** Capability-checked management controls for users who can manage this item. */
+function en_frontend_post_actions( $post_id ) {
+	$post = get_post( $post_id );
+	if ( ! $post ) return;
+	$edit = current_user_can( 'edit_post', $post_id );
+	$delete = current_user_can( 'delete_post', $post_id );
+	if ( ! $edit && ! $delete ) return;
+	echo '<div class="en-card-management" aria-label="Manage ' . esc_attr( get_the_title( $post_id ) ) . '">';
+	if ( $edit ) echo '<a class="btn btn--ghost btn--sm" href="' . esc_url( get_edit_post_link( $post_id ) ) . '">Edit</a>';
+	if ( $delete ) echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(\'Move this item to the trash?\')"><input type="hidden" name="action" value="en_trash_content"><input type="hidden" name="post_id" value="' . esc_attr( $post_id ) . '">' . wp_nonce_field( 'en_trash_content_' . $post_id, 'en_trash_nonce', true, false ) . '<button class="btn btn--ghost btn--sm" type="submit">Delete</button></form>';
+	echo '</div>';
+}
+
+function en_handle_frontend_trash() {
+	$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+	$post = get_post( $post_id );
+	$nonce = isset( $_POST['en_trash_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['en_trash_nonce'] ) ) : '';
+	if ( ! $post || ! wp_verify_nonce( $nonce, 'en_trash_content_' . $post_id ) || ! current_user_can( 'delete_post', $post_id ) ) wp_die( esc_html__( 'You cannot delete this item.', 'eventnest' ), '', array( 'response' => 403 ) );
+	wp_trash_post( $post_id );
+	$back = wp_get_referer();
+	wp_safe_redirect( $back ? $back : home_url( '/' ) );
+	exit;
+}
+add_action( 'admin_post_en_trash_content', 'en_handle_frontend_trash' );
+
 function en_sample_events() {
 	$mk = function ( $title, $days, $time, $venue, $city, $cat, $price, $hue ) {
-		return array( 'url' => '#', 'title' => $title, 'img' => '', 'date' => date( 'Y-m-d', strtotime( "+$days days", current_time( 'timestamp' ) ) ),
+		return array( 'url' => home_url( '/events/' ), 'title' => $title, 'img' => '', 'date' => date( 'Y-m-d', strtotime( "+$days days", current_time( 'timestamp' ) ) ),
 			'deadline' => date( 'Y-m-d', strtotime( '+' . max( 0, $days - 2 ) . ' days', current_time( 'timestamp' ) ) ),
 			'time' => $time, 'venue' => $venue, 'city' => $city, 'cat' => $cat, 'price' => $price, 'hue' => $hue, 'sample' => true );
 	};
 	return array(
-		$mk( 'Inter-College Dance Competition', 6, '15:00', 'Main Auditorium', 'Campus', 'Competition', 'Free', 330 ),
-		$mk( 'Tech Club Workshop', 9, '10:00', 'Computer Lab', 'Campus', 'Workshop', 'Free', 205 ),
-		$mk( 'Cultural Fest 2026', 12, '17:00', 'College Ground', 'Campus', 'Cultural', 'Free', 275 ),
-		$mk( 'AI & ML Workshop', 15, '11:00', 'Seminar Hall', 'Campus', 'Technical', 'Free', 220 ),
+		$mk( 'AI & Web Development Workshop', 5, '10:00', 'Computer Lab', 'Campus', 'Technical', 'Free', 15 ),
+		$mk( 'Campus Culture Night', 9, '17:00', 'Main Auditorium', 'Campus', 'Cultural', 'Free', 50 ),
+		$mk( 'Dance Crew Open Auditions', 13, '15:00', 'Dance Studio', 'Campus', 'Cultural', 'Free', 112 ),
+		$mk( 'Acoustic Open Mic', 17, '16:00', 'Seminar Hall', 'Campus', 'Cultural', 'Free', 168 ),
 		$mk( 'Photography Walk', 19, '08:00', 'Campus Gate', 'Campus', 'Club Event', 'Free', 25 ),
 		$mk( 'Inter-College Coding Challenge', 24, '09:00', 'Innovation Lab', 'Campus', 'Competition', 'Free', 180 ),
 	);
 }
+
+function en_sample_event_url( $event ) {
+	$archive = get_post_type_archive_link( 'event' );
+	return add_query_arg( 'en_sample_event', sanitize_title( $event['title'] ), $archive ? $archive : home_url( '/events/' ) );
+}
+
+add_filter( 'query_vars', function ( $vars ) { $vars[] = 'en_sample_event'; return $vars; } );
+add_action( 'template_redirect', function () {
+	$slug = get_query_var( 'en_sample_event' );
+	if ( ! $slug ) return;
+	$event = null;
+	foreach ( en_sample_events() as $sample ) if ( sanitize_title( $sample['title'] ) === sanitize_title( $slug ) ) { $event = $sample; break; }
+	if ( ! $event ) { global $wp_query; $wp_query->set_404(); status_header( 404 ); nocache_headers(); include get_404_template(); exit; }
+	get_header();
+	$where = trim( $event['venue'] . ( $event['venue'] && $event['city'] ? ', ' : '' ) . $event['city'] );
+	?>
+	<article class="event"><div class="wrap">
+		<div class="event__hero" style="--h:<?php echo (int) $event['hue']; ?>"><span class="event__hero-mark" aria-hidden="true">EVENTNEST</span></div>
+		<div class="event__grid"><main class="event__main">
+			<span class="event-category"><?php echo esc_html( $event['cat'] ); ?></span>
+			<h1 class="event__title"><?php echo esc_html( $event['title'] ); ?></h1>
+			<p class="event__by">Organized by <b>Campus community</b></p>
+			<ul class="facts">
+				<li><span>Date &amp; time</span><?php echo esc_html( en_fmt_date( $event['date'], 'l, j F Y' ) . ' · ' . en_fmt_time( $event['time'] ) ); ?></li>
+				<li><span>Where</span><?php echo esc_html( $where ); ?></li>
+			</ul>
+			<section class="event-section"><h2>About this event</h2><div class="prose"><p>Explore <?php echo esc_html( strtolower( $event['cat'] ) ); ?> activities and connect with the campus community at <?php echo esc_html( $event['title'] ); ?>.</p></div></section>
+			<section class="event-section"><h2>Organizer</h2><div class="event-panel event-organizer"><span class="event-organizer__avatar" aria-hidden="true">✦</span><div><strong>Campus community</strong><p>Campus event organizer</p></div></div></section>
+		</main><aside class="event__aside"><div class="ticket-box"><p class="ticket-box__price"><?php echo esc_html( $event['price'] ); ?></p><p class="ticket-box__note">Preview listing. Check the Events page for confirmed event details.</p><a class="btn btn--ghost btn--block" href="<?php echo esc_url( get_post_type_archive_link( 'event' ) ); ?>">Browse published events</a></div></aside></div>
+	</div></article>
+	<?php
+	get_footer();
+	exit;
+}, 1 );
 
 function en_upcoming( $n = 6, $extra = array() ) {
 
@@ -265,21 +325,23 @@ function en_competitions_shortcode() {
 
 /* ---------- Card renderer ---------- */
 function en_card( array $e ) {
+	$url = ! empty( $e['sample'] ) ? en_sample_event_url( $e ) : $e['url'];
 	$day = $e['date'] ? en_fmt_date( $e['date'], 'j' ) : '';
 	$mon = $e['date'] ? en_fmt_date( $e['date'], 'M' ) : '';
 	$where = trim( $e['venue'] . ( $e['venue'] && $e['city'] ? ', ' : '' ) . $e['city'] );
+	$is_competition = ! empty( $e['id'] ) && has_term( 'competition', 'event_type', (int) $e['id'] );
 	?>
 	<article class="ev-card">
-		<a class="ev-card__media" href="<?php echo esc_url( $e['url'] ); ?>" style="--h:<?php echo (int) $e['hue']; ?>" tabindex="-1" aria-hidden="true">
-			<?php echo $e['img']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+		<a class="ev-card__media" href="<?php echo esc_url( $url ); ?>" style="--h:<?php echo (int) $e['hue']; ?>" tabindex="-1" aria-hidden="true">
+			<?php if ( ! empty( $e['img'] ) ) : ?><?php echo $e['img']; // phpcs:ignore WordPress.Security.EscapeOutput ?><?php else : ?><img class="ev-card__placeholder" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/eventnest-event-cover.svg' ); ?>" alt="" loading="lazy"><?php endif; ?>
 			<?php if ( $day ) : ?><span class="ev-card__date"><b><?php echo esc_html( $day ); ?></b><?php echo esc_html( $mon ); ?></span><?php endif; ?>
 			<?php if ( $e['cat'] ) : ?><span class="ev-card__cat"><?php echo esc_html( $e['cat'] ); ?></span><?php endif; ?>
 		</a>
-		<div class="ev-card__body">
+	<div class="ev-card__body">
 
 	<h3 class="ev-card__title">
 
-		<a href="<?php echo esc_url( $e['url'] ); ?>">
+		<a href="<?php echo esc_url( $url ); ?>">
 
 			<?php echo esc_html( $e['title'] ); ?>
 
@@ -319,14 +381,17 @@ function en_card( array $e ) {
 
 	<a
 		class="ev-card__action"
-		href="<?php echo esc_url( $e['url'] ); ?>"
+		href="<?php echo esc_url( $url ); ?>"
 	>
 
-		<?php esc_html_e( 'View event', 'eventnest' ); ?>
+		<?php echo esc_html( $is_competition ? 'View competition' : __( 'View event', 'eventnest' ) ); ?>
 
 		<span aria-hidden="true">→</span>
 
 	</a>
+	<?php if ( ! empty( $e['id'] ) ) : ?>
+		<?php en_frontend_post_actions( (int) $e['id'] ); ?>
+	<?php endif; ?>
 
 </div>
 	</article>

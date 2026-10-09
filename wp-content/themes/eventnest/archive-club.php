@@ -20,12 +20,13 @@ $search = isset( $_GET['club_search'] ) ? sanitize_text_field( wp_unslash( $_GET
 				<?php while ( have_posts() ) : the_post(); ?>
 					<article <?php post_class( 'en-club-card' ); ?>>
 						<a class="en-club-card__media" href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'View %s', 'eventnest' ), get_the_title() ) ); ?>">
-							<?php if ( has_post_thumbnail() ) : the_post_thumbnail( 'en-card', array( 'loading' => 'lazy' ) ); else : ?><span aria-hidden="true">✦</span><?php endif; ?>
+                            <?php if ( has_post_thumbnail() ) : the_post_thumbnail( 'en-card', array( 'loading' => 'lazy' ) ); else : ?><img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/eventnest-club-cover.svg' ); ?>" alt="" loading="lazy"><?php endif; ?>
 						</a>
 						<div class="en-club-card__body">
 							<h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
 							<?php if ( has_excerpt() || get_the_content() ) : ?><p><?php echo esc_html( wp_trim_words( get_the_excerpt(), 22 ) ); ?></p><?php endif; ?>
-							<a class="link-more" href="<?php the_permalink(); ?>">View club <span aria-hidden="true">→</span></a>
+							<a class="link-more" href="<?php the_permalink(); ?>">View club <span aria-hidden="true">â†’</span></a>
+							<?php if ( function_exists( 'en_frontend_post_actions' ) ) en_frontend_post_actions( get_the_ID() ); ?>
 						</div>
 					</article>
 				<?php endwhile; ?>
