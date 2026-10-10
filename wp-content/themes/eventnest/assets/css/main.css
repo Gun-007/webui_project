@@ -3384,3 +3384,77 @@ html:not([data-theme="dark"]) .en-approval-card__identity p,html:not([data-theme
 html:not([data-theme="dark"]) .en-approval-form select{background:#fff;border-color:#E7C58D;color:#34200E}
 html:not([data-theme="dark"]) .en-club-leader{border-color:#F0DCC2}
 @media(max-width:760px){.en-approval-card{grid-template-columns:1fr}.en-approval-form{grid-template-columns:1fr}.en-approval-form .btn{width:100%}}
+.en-calendar{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:5px}.en-calendar th,.en-calendar td{border:1px solid var(--line);border-radius:10px;padding:.55rem;vertical-align:top}.en-calendar td{height:100px;background:var(--surface)}.en-calendar__event{display:block;margin-top:.35rem;font-size:.8rem;line-height:1.25;overflow-wrap:anywhere}.en-event-calendar{overflow-x:auto}@media(max-width:700px){.en-calendar{min-width:650px}}
+
+/* Shared dashboard polish */
+.en-dashboard-page{isolation:isolate}
+.en-dashboard-heading{padding-bottom:1.15rem;border-bottom:1px solid var(--line,#303846)}
+.en-dashboard-page .en-dashboard-tools a{min-height:64px;box-shadow:0 8px 22px -20px rgba(0,0,0,.5)}
+.en-dashboard-page .en-dashboard-metrics{align-items:stretch}
+.en-dashboard-review{padding:clamp(1rem,2.4vw,1.6rem);border-radius:18px}
+.en-dashboard-review>h2{font-size:clamp(1.25rem,2.5vw,1.7rem)}
+.en-approval-card{padding:1rem;margin:.8rem 0;border:1px solid var(--line,#303846);border-radius:14px;background:var(--surface,#11151e)}
+.en-approval-form{display:flex;align-items:end;flex-wrap:wrap;gap:.8rem;margin-top:1rem}
+.en-approval-form label{display:grid;gap:.35rem;min-width:170px}
+.en-event-calendar>p{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.en-event-calendar>p a{font-weight:700;color:var(--brand)}
+.en-calendar{border-spacing:4px}
+.en-calendar th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#9da5b3)}
+.en-calendar td{height:112px;background:rgba(127,127,127,.06);font-size:.9rem}
+.en-calendar__event{padding:.35rem .4rem;border-radius:7px;background:rgba(255,85,116,.12);color:inherit;text-decoration:none}
+.en-calendar__event:hover{text-decoration:underline}
+html:not([data-theme="dark"]) .en-dashboard-heading{border-color:#F0DCC8}
+html:not([data-theme="dark"]) .en-approval-card{background:#fff;border-color:#F0DCC8}
+html:not([data-theme="dark"]) .en-event-calendar .en-calendar th{color:#72563B}
+html:not([data-theme="dark"]) .en-calendar td{background:#fffdf7;border-color:#EEDBC8}
+html:not([data-theme="dark"]) .en-calendar__event{background:#FFF0DD;color:#6B3216}
+@media(max-width:620px){.en-approval-form{align-items:stretch;flex-direction:column}.en-approval-form label{min-width:0}.en-calendar{min-width:680px}.en-event-calendar>p{justify-content:flex-start;flex-wrap:wrap}}
+
+/* Clearer staff dashboard calendar and review queues. */
+.en-dashboard-page>.en-dashboard-review{margin:1.4rem 0;padding:clamp(1.15rem,2.5vw,1.8rem);border:1px solid var(--line,#303846);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015));box-shadow:0 18px 50px -38px rgba(0,0,0,.7)}
+.en-dashboard-page>.en-dashboard-review>h2{margin:.25rem 0 .5rem}
+.en-event-calendar__heading{display:flex;justify-content:space-between;align-items:end;gap:1rem;margin-bottom:1rem}
+.en-event-calendar__heading h2,.en-event-calendar__heading p{margin:.2rem 0}
+.en-event-calendar__heading nav{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.en-calendar__nav{padding:.55rem .75rem;border:1px solid var(--line,#303846);border-radius:9px;text-decoration:none;font-weight:700}
+.en-event-calendar .en-calendar{border-spacing:5px}
+.en-event-calendar .en-calendar th{padding:.6rem .35rem}
+.en-event-calendar .en-calendar td{height:clamp(100px,11vw,145px);padding:.55rem;background:linear-gradient(155deg,rgba(255,255,255,.055),rgba(255,255,255,.018));transition:border-color .18s,background .18s}
+.en-event-calendar .en-calendar td.is-today{border-color:var(--brand,#ff5574);box-shadow:inset 0 0 0 1px var(--brand,#ff5574)}
+.en-event-calendar .en-calendar td>time{display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;font-weight:800}
+.en-event-calendar .en-calendar td.is-today>time{background:var(--brand,#ff5574);color:#fff}
+.en-event-calendar .en-calendar__event{display:grid;gap:.18rem;margin-top:.45rem;padding:.45rem .5rem;border:1px solid rgba(255,85,116,.18);border-radius:9px;line-height:1.2}
+.en-event-calendar .en-calendar__event small{opacity:.72;font-size:.67rem;text-transform:uppercase;letter-spacing:.04em}
+.en-event-calendar .en-calendar__event.is-competition{border-color:rgba(97,178,255,.28);background:rgba(97,178,255,.12)}
+.en-story-approvals .en-approval-card{grid-template-columns:minmax(0,1fr) auto}
+.en-story-approval-card h3{margin:.25rem 0}
+.en-story-approval-card>div>p{margin:.3rem 0}
+.en-story-approval-card form{display:flex;gap:.55rem;flex-wrap:wrap;justify-content:flex-end}
+.en-staff-approvals .en-approval-form{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr)) auto;align-items:end}
+html:not([data-theme="dark"]) .en-dashboard-page>.en-dashboard-review{background:linear-gradient(145deg,#fff,#FFFCF5 60%,#FFF0E5);border-color:#F0D7B5;box-shadow:0 18px 45px -35px rgba(151,67,13,.38)}
+html:not([data-theme="dark"]) .en-calendar__nav{border-color:#EEDBC8;background:#fffdf8;color:#9E3E12}
+html:not([data-theme="dark"]) .en-event-calendar .en-calendar td{background:linear-gradient(145deg,#fff,#FFF8E8);border-color:#EEDBC8}
+html:not([data-theme="dark"]) .en-event-calendar .en-calendar td.is-today{border-color:#E85B18;box-shadow:inset 0 0 0 1px #E85B18}
+html:not([data-theme="dark"]) .en-event-calendar .en-calendar td.is-today>time{background:#E85B18}
+html:not([data-theme="dark"]) .en-event-calendar .en-calendar__event{border-color:#F1D8B9;background:#FFF0DD;color:#713714}
+html:not([data-theme="dark"]) .en-event-calendar .en-calendar__event.is-competition{border-color:#B9D9F3;background:#EAF5FF;color:#174B71}
+@media(max-width:760px){.en-event-calendar__heading{align-items:flex-start;flex-direction:column}.en-staff-approvals .en-approval-form{grid-template-columns:1fr}.en-story-approvals .en-approval-card{grid-template-columns:1fr}.en-story-approval-card form{justify-content:flex-start}}
+
+/* Keep account-review controls inside their card and make calendar entries legible. */
+.en-staff-approvals .en-approval-card{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;overflow:hidden}
+.en-staff-approvals .en-approval-card__identity{width:100%}
+.en-staff-approvals .en-approval-form{display:grid;width:100%;min-width:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;align-items:end;margin:0}
+.en-staff-approvals .en-approval-form label{min-width:0;width:100%}
+.en-staff-approvals .en-approval-form select{width:100%;min-width:0}
+.en-staff-approvals .en-approval-form .btn{grid-column:1/-1;justify-self:start;min-width:170px}
+.en-event-calendar__heading nav{display:flex!important;align-items:center;justify-content:flex-start;gap:.7rem!important;flex-wrap:wrap}
+.en-event-calendar__heading nav>*{margin:0 .2rem}
+.en-event-calendar .en-calendar{min-width:0;width:100%;table-layout:fixed;border-spacing:4px}
+.en-event-calendar .en-calendar th{width:14.285%;padding:.55rem .15rem;text-align:center}
+.en-event-calendar .en-calendar td{width:14.285%;min-width:0;height:clamp(92px,10vw,140px);padding:.4rem;overflow:hidden;vertical-align:top}
+.en-event-calendar .en-calendar__event{display:flex!important;width:100%;min-width:0;box-sizing:border-box;flex-direction:column;gap:.2rem;margin-top:.35rem;padding:.4rem;border-radius:8px;overflow:hidden;text-decoration:none!important;overflow-wrap:anywhere;word-break:break-word}
+.en-event-calendar .en-calendar__event>span{display:-webkit-box;max-width:100%;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.2}
+.en-event-calendar .en-calendar__event small{display:block;margin-top:.08rem;font-size:.62rem;line-height:1.1}
+html:not([data-theme="dark"]) .en-staff-approvals .en-approval-card{background:linear-gradient(145deg,#fff,#FFFCF5);border-color:#F0D7B5}
+html:not([data-theme="dark"]) .en-staff-approvals .en-approval-form select{background:#fff;border-color:#E7C58D;color:#34200E}
+@media(max-width:700px){.en-staff-approvals .en-approval-form{grid-template-columns:1fr}.en-staff-approvals .en-approval-form .btn{grid-column:auto;width:100%}.en-event-calendar .en-calendar{min-width:620px}.en-event-calendar .en-calendar td{height:105px}}

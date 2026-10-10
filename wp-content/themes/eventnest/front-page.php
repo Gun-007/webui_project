@@ -24,6 +24,22 @@ if ( ! $has_events ) {
 	usort( $events, static function ( $a, $b ) { return strcmp( $a['date'], $b['date'] ); } );
 }
 
+$closing_meta = array(
+	'relation' => 'AND',
+	array(
+		'key'     => en_meta_key( 'registration_deadline' ),
+		'value'   => array( current_time( 'Y-m-d' ), date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS ) ),
+		'compare' => 'BETWEEN',
+		'type'    => 'DATE',
+	),
+	array(
+		'key'     => '_en_date',
+		'value'   => current_time( 'Y-m-d' ),
+		'compare' => '>=',
+		'type'    => 'DATE',
+	),
+);
+if ( ! function_exists( 'enc_user_is_faculty' ) || ! enc_user_is_faculty() ) $closing_meta[] = array( 'relation' => 'OR', array( 'key' => '_en_audience', 'compare' => 'NOT EXISTS' ), array( 'key' => '_en_audience', 'value' => 'faculty', 'compare' => '!=' ) );
 $closing_query = new WP_Query( array(
 	'post_type'      => 'event',
 	'post_status'    => 'publish',
@@ -31,21 +47,7 @@ $closing_query = new WP_Query( array(
 	'meta_key'       => en_meta_key( 'registration_deadline' ),
 	'orderby'        => 'meta_value',
 	'order'          => 'ASC',
-	'meta_query'     => array(
-		'relation' => 'AND',
-		array(
-			'key'     => en_meta_key( 'registration_deadline' ),
-			'value'   => array( current_time( 'Y-m-d' ), date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS ) ),
-			'compare' => 'BETWEEN',
-			'type'    => 'DATE',
-		),
-		array(
-			'key'     => '_en_date',
-			'value'   => current_time( 'Y-m-d' ),
-			'compare' => '>=',
-			'type'    => 'DATE',
-		),
-	),
+	'meta_query'     => $closing_meta,
 ) );
 $closing = array();
 if ( $closing_query->have_posts() ) {

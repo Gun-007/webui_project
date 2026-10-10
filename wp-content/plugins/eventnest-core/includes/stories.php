@@ -25,9 +25,40 @@ add_action( 'admin_post_nopriv_enc_submit_story', 'enc_handle_story_submission' 
 
 function enc_story_is_student( $user_id = 0 ) {
 	$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
-	$user = $user_id ? get_userdata( $user_id ) : false;
-	return $user && in_array( 'en_student', (array) $user->roles, true );
+	return $user_id && user_can( $user_id, 'en_submit_story' );
 }
+
+add_action( 'admin_post_enc_review_story', function () {
+	if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Administrator access required.', '', array( 'response' => 403 ) );
+	$id = isset( $_POST['story_id'] ) ? absint( $_POST['story_id'] ) : 0;
+	$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
+	$nonce = isset( $_POST['enc_story_review_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['enc_story_review_nonce'] ) ) : '';
+	if ( ! $id || get_post_type( $id ) !== 'student_story' || ! wp_verify_nonce( $nonce, 'enc_review_story_' . $id ) || ! in_array( $decision, array( 'approve', 'reject' ), true ) ) wp_die( 'Invalid story review.', '', array( 'response' => 400 ) );
+	update_post_meta( $id, '_en_story_review_status', 'approve' === $decision ? 'approved' : 'rejected' );
+	wp_update_post( array( 'ID' => $id, 'post_status' => 'approve' === $decision ? 'publish' : 'draft' ) );
+	wp_safe_redirect( home_url( '/dashboard/#en-story-approvals' ) ); exit;
+} );
+
+function enc_dashboard_story_review_queue() {
+	if ( ! current_user_can( 'manage_options' ) ) return '';
+	$stories = get_posts( array( 'post_type' => 'student_story', 'post_status' => 'pending', 'posts_per_page' => 100, 'orderby' => 'date', 'order' => 'ASC' ) );
+	$out = '<section class="en-dashboard-review en-story-approvals" id="en-story-approvals"><p class="eyebrow eyebrow--small">ADMIN REVIEW</p><h2>Student stories to review <span class="en-approval-count">' . esc_html( number_format_i18n( count( $stories ) ) ) . '</span></h2><p class="muted">Approve stories to publish them, or reject them to return them to the student.</p>';
+	if ( ! $stories ) return $out . '<p class="en-dashboard-note">No stories are waiting for review.</p></section>';
+	foreach ( $stories as $story ) {
+		$author = get_userdata( (int) $story->post_author );
+		$out .= '<article class="en-approval-card en-story-approval-card"><div><p class="eyebrow eyebrow--small">STUDENT STORY · ' . esc_html( get_the_date( 'j M Y', $story ) ) . '</p><h3>' . esc_html( $story->post_title ) . '</h3><p class="muted">By ' . esc_html( $author ? $author->display_name : 'Student' ) . '</p><p>' . esc_html( wp_trim_words( $story->post_content, 35 ) ) . '</p></div><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_review_story"><input type="hidden" name="story_id" value="' . (int) $story->ID . '">' . wp_nonce_field( 'enc_review_story_' . $story->ID, 'enc_story_review_nonce', true, false ) . '<button class="btn btn--brand" name="decision" value="approve">Approve story</button><button class="btn btn--ghost" name="decision" value="reject">Reject</button></form></article>';
+	}
+	return $out . '</section>';
+}
+
+add_filter( 'pre_trash_post', function ( $trash, $post ) {
+	if ( $post && 'student_story' === $post->post_type && current_user_can( 'manage_options' ) ) {
+		update_post_meta( $post->ID, '_en_story_review_status', 'rejected' );
+		wp_update_post( array( 'ID' => $post->ID, 'post_status' => 'draft' ) );
+		return false;
+	}
+	return $trash;
+}, 10, 2 );
 
 function enc_story_return( $page, $result ) {
 	$url = home_url( '/' . trim( $page, '/' ) . '/' );
@@ -157,8 +188,10 @@ function enc_my_stories_shortcode() {
 	$out .= '<div class="en-my-stories">';
 	foreach ( $items as $item ) {
 		$status = get_post_status( $item );
-		$label = $status === 'publish' ? 'Published' : ( $status === 'pending' ? 'Waiting for review' : ucfirst( $status ) );
+		$review_status = get_post_meta( $item->ID, '_en_story_review_status', true );
+		$label = 'rejected' === $review_status ? 'Rejected' : ( $status === 'publish' ? 'Published' : ( $status === 'pending' ? 'Waiting for review' : ucfirst( $status ) ) );
 		$out .= '<article class="en-my-story"><span class="en-my-story__status en-my-story__status--' . esc_attr( sanitize_html_class( $status ) ) . '">' . esc_html( $label ) . '</span><h2>' . esc_html( get_the_title( $item ) ) . '</h2><p class="muted">Submitted ' . esc_html( get_the_date( 'j M Y', $item ) ) . '</p>';
+		if ( 'rejected' === $review_status ) $out .= '<p class="muted">Your story was rejected by an administrator. Your account is unchanged.</p>';
 		if ( $status === 'publish' ) $out .= '<a class="link-more" href="' . esc_url( get_permalink( $item ) ) . '">View story →</a>';
 		$out .= '</article>';
 	}

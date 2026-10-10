@@ -26,11 +26,32 @@ function enc_registration_release_lock( $event_id, $user_id ) {
 }
 
 /** Checks shared by individual and team sign-ups. Returns WP_Error or true. */
+function enc_user_can_register_for_events( $user_id ) {
+	return user_can( $user_id, 'en_register_event' ) || in_array( enc_user_role( $user_id ), array( 'en_student', 'en_club_head' ), true ) || enc_user_is_faculty( $user_id );
+}
+
+/** EventNest faculty audience includes teaching staff, faculty heads, and academic directors. */
+function enc_user_is_faculty( $user_id = 0 ) {
+	return in_array( enc_user_role( $user_id ), array( 'en_faculty', 'en_faculty_head', 'en_director', 'en_deputy_director' ), true );
+}
+
+/** Registration stays open on event day until its configured end time. */
+function enc_registration_window_open( $event_id ) {
+	$state = enc_event_state( $event_id );
+	if ( 'registration_open' === $state ) return true;
+	if ( 'ongoing' !== $state ) return false;
+	$deadline = (string) get_post_meta( $event_id, '_en_deadline', true );
+	if ( $deadline && $deadline < wp_date( 'Y-m-d' ) ) return false;
+	$end = (string) get_post_meta( $event_id, '_en_end', true );
+	return ! $end || wp_date( 'H:i' ) <= $end;
+}
+
 function enc_can_register( $event_id, $user_id ) {
 	$event = get_post( $event_id );
 	if ( ! $event || $event->post_type !== 'event' || $event->post_status !== 'publish' ) return new WP_Error( 'no_event', 'Event not found.' );
-	if ( ! user_can( $user_id, 'en_register_event' ) ) return new WP_Error( 'forbidden', 'Your account cannot register for events.' );
-	if ( enc_event_state( $event_id ) !== 'registration_open' ) return new WP_Error( 'closed', 'Registration is closed for this event.' );
+	if ( ! enc_user_can_register_for_events( $user_id ) ) return new WP_Error( 'forbidden', 'Your account cannot register for events.' );
+	if ( 'faculty' === get_post_meta( $event_id, '_en_audience', true ) && ! enc_user_is_faculty( $user_id ) ) return new WP_Error( 'forbidden', 'This event is reserved for faculty.' );
+	if ( ! enc_registration_window_open( $event_id ) ) return new WP_Error( 'closed', 'Registration is closed for this event.' );
 	if ( enc_is_registered( $event_id, $user_id ) ) return new WP_Error( 'duplicate', 'Already registered.' );
 	return true;
 }

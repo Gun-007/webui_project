@@ -1,13 +1,17 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.2.15' );
+define( 'EN_VERSION', '1.2.16' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/demo-events.php';
 require_once get_template_directory() . '/inc/demo-events.php';
 require_once get_template_directory() . '/inc/customizer.php';
 require_once get_template_directory() . '/inc/clubs.php';
+
+add_action( 'init', function () {
+	if ( ! get_page_by_path( 'contact', OBJECT, 'page' ) ) wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_name' => 'contact', 'post_title' => 'Contact', 'post_content' => '' ) );
+}, 40 );
 
 add_action( 'after_setup_theme', function () {
 	load_theme_textdomain( 'eventnest', get_template_directory() . '/languages' );

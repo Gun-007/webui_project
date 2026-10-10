@@ -18,7 +18,8 @@ function enc_handle_club_head_change() {
 	if ( $new_head === $old_head ) enc_club_admin_redirect( 'unchanged' );
 	if ( $new_head ) {
 		$candidate = get_userdata( $new_head );
-		if ( ! $candidate || enc_is_account_disabled( $new_head ) || ! in_array( 'en_club_head', (array) $candidate->roles, true ) ) enc_club_admin_redirect( 'invalid' );
+		if ( ! $candidate || enc_is_account_disabled( $new_head ) || in_array( 'administrator', (array) $candidate->roles, true ) ) enc_club_admin_redirect( 'invalid' );
+		$candidate->set_role( 'en_club_head' );
 	}
 	update_post_meta( $club_id, '_en_club_head', $new_head );
 	update_post_meta( $club_id, '_en_club_head_assigned_at', current_time( 'mysql', true ) );
@@ -53,7 +54,7 @@ function enc_render_club_leadership_admin() {
 	$messages = array( 'saved' => 'Club leadership updated. Pending membership reviews are now visible to the assigned reviewers.', 'invalid' => 'Choose a valid Club Head and provide a reason of at least 5 characters.', 'unchanged' => 'That Club Head is already assigned.' );
 	echo '<div class="wrap"><h1>Club Leadership</h1><p>Assign a successor or mark a club vacant. Membership, events, registrations, and historical authorship are preserved. The former head keeps the role if still assigned to another club.</p>';
 	if ( isset( $messages[ $result ] ) ) echo '<div class="notice ' . ( 'saved' === $result ? 'notice-success' : 'notice-warning' ) . ' is-dismissible"><p>' . esc_html( $messages[ $result ] ) . '</p></div>';
-	$candidates = get_users( array( 'role' => 'en_club_head', 'number' => 500, 'orderby' => 'display_name', 'order' => 'ASC' ) );
+	$candidates = get_users( array( 'role__in' => array( 'en_club_head', 'en_faculty', 'en_faculty_head', 'en_student', 'subscriber' ), 'number' => 1000, 'orderby' => 'display_name', 'order' => 'ASC' ) );
 	foreach ( $clubs as $club ) {
 		$current_id = absint( get_post_meta( $club->ID, '_en_club_head', true ) );
 		$current = $current_id ? get_userdata( $current_id ) : false;

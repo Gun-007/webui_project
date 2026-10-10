@@ -22,9 +22,11 @@ function enc_handle_proposal_review() {
 	$comment = isset( $_POST['review_comment'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_comment'] ) ) : '';
 	$result = enc_proposal_decide( $proposal_id, get_current_user_id(), $decision, $comment );
 	if ( is_wp_error( $result ) ) {
-		wp_safe_redirect( add_query_arg( 'review_result', 'error', home_url( '/review-proposals/' ) ) );
+		$error = 'comment' === $result->get_error_code() ? 'comment_required' : 'error';
+		wp_safe_redirect( add_query_arg( 'review_result', $error, home_url( '/review-proposals/' ) ) );
 		exit;
 	}
+	if ( 'under_review' === $result ) $result = 'initial' === enc_proposal_current_stage( $proposal_id ) ? 'awaiting_approvals' : 'director_review';
 	wp_safe_redirect( add_query_arg( 'review_result', sanitize_key( $result ), home_url( '/review-proposals/' ) ) );
 	exit;
 }
@@ -36,10 +38,12 @@ function enc_review_proposals_shortcode() {
 	$items = get_posts( array( 'post_type' => 'proposal', 'post_status' => 'publish', 'posts_per_page' => 200, 'orderby' => 'date', 'order' => 'ASC' ) );
 	$out = '<section class="section"><div class="wrap"><div class="page-head"><p class="eyebrow eyebrow--small">EVENTNEST WORKFLOW</p><h1>Review Proposals</h1><p class="section__sub">Review each submission at the approval stage assigned to you.</p>';
 	$result = isset( $_GET['review_result'] ) ? sanitize_key( wp_unslash( $_GET['review_result'] ) ) : '';
-	if ( $result === 'under_review' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Approval recorded. The proposal was sent to the next reviewer; the event appears after final approval.</p>';
+	if ( $result === 'awaiting_approvals' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Approval recorded. The other initial approval is still required; no later reviewer will receive it yet.</p>';
+	if ( $result === 'director_review' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Both initial approvals are complete. The proposal is now waiting for final Director or Deputy Director approval.</p>';
 	if ( $result === 'published' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Final approval recorded. The event is now published in Events.</p>';
 	if ( in_array( $result, array( 'rejected', 'needs_changes' ), true ) ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Your decision has been recorded.</p>';
 	if ( $result === 'error' ) $out .= '<p class="en-auth__notice en-auth__notice--error" role="status">The decision could not be saved. Refresh and check whether the proposal is still awaiting your review.</p>';
+	if ( $result === 'comment_required' ) $out .= '<p class="en-auth__notice en-auth__notice--error" role="alert">Add a reviewer comment before requesting changes or rejecting the proposal. No decision was recorded.</p>';
 	$out .= '</div>';
 	$shown = 0;
 	foreach ( $items as $item ) {
@@ -56,7 +60,7 @@ function enc_review_proposals_shortcode() {
 		if ( has_post_thumbnail( $id ) ) $out .= '<figure class="en-review-card__image">' . get_the_post_thumbnail( $id, 'large', array( 'loading' => 'lazy' ) ) . '</figure>';
 		$out .= '<div class="event-panel en-review-card__description">' . wpautop( esc_html( $item->post_content ) ) . '</div>';
 		$out .= '<form class="en-review-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_review_proposal"><input type="hidden" name="proposal_id" value="' . esc_attr( $id ) . '">' . wp_nonce_field( 'enc_review_proposal_' . $id, 'enc_review_nonce', true, false );
-		$out .= '<label class="en-auth__field"><span>Reviewer comment (required for changes or rejection)</span><textarea name="review_comment" rows="3"></textarea></label><div class="en-review-form__actions"><button class="btn btn--brand" name="decision" value="approve" type="submit">Approve</button><button class="btn btn--ghost" name="decision" value="changes" type="submit">Request changes</button><button class="btn btn--danger" name="decision" value="reject" type="submit">Reject</button></div></form></article>';
+		$out .= '<label class="en-auth__field"><span>Reviewer comment (required for changes or rejection)</span><textarea name="review_comment" rows="3"></textarea><small>A reason is required to request changes or reject.</small></label><div class="en-review-form__actions"><button class="btn btn--brand" name="decision" value="approve" type="submit">Approve</button><button class="btn btn--ghost" name="decision" value="changes" type="submit">Request changes</button><button class="btn btn--danger" name="decision" value="reject" type="submit">Reject</button></div></form></article>';
 	}
 	if ( ! $shown ) $out .= '<div class="empty"><h2>No proposals waiting for you</h2><p>New submissions will appear here when they reach one of your approval stages.</p></div>';
 	return $out . '</div></section>';

@@ -72,6 +72,27 @@ function enc_seed_default_club_events() {
 	if ( $complete ) update_option( 'enc_default_club_events_seeded', 1, false );
 }
 
+/** Optional faculty-only demo events, seeded from the admin's demo-content action. */
+function enc_seed_default_faculty_events() {
+	if ( get_option( 'enc_default_faculty_events_seeded' ) || ! post_type_exists( 'event' ) ) return;
+	$admin_ids = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+	if ( ! $admin_ids ) return;
+	$items = array(
+		'faculty-development-workshop' => array( 'Faculty Development Workshop', 'A sample professional development session for faculty.', 8, 'Conference Room', '09:30', '12:00' ),
+		'faculty-research-forum' => array( 'Faculty Research Forum', 'A sample forum for sharing research and teaching practice among faculty.', 15, 'Seminar Hall', '13:00', '15:00' ),
+		'faculty-wellbeing-session' => array( 'Faculty Wellbeing Session', 'A sample wellbeing and peer connection session reserved for faculty.', 22, 'Wellbeing Centre', '10:00', '11:30' ),
+	);
+	$complete = true;
+	foreach ( $items as $slug => $item ) {
+		if ( get_posts( array( 'post_type' => 'event', 'name' => $slug, 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) ) ) continue;
+		$date = wp_date( 'Y-m-d', current_time( 'timestamp' ) + $item[2] * DAY_IN_SECONDS );
+		$id = wp_insert_post( array( 'post_type' => 'event', 'post_status' => 'publish', 'post_name' => $slug, 'post_title' => $item[0], 'post_content' => $item[1], 'post_author' => (int) $admin_ids[0], 'meta_input' => array( '_en_date' => $date, '_en_start' => $item[4], '_en_end' => $item[5], '_en_venue' => $item[3], '_en_deadline' => $date, '_en_max' => 100, '_en_fee' => 0, '_en_audience' => 'faculty' ) ), true );
+		if ( is_wp_error( $id ) ) $complete = false;
+		elseif ( taxonomy_exists( 'event_type' ) ) { $term = term_exists( 'Workshop', 'event_type' ); if ( $term ) wp_set_object_terms( $id, (int) ( is_array( $term ) ? $term['term_id'] : $term ), 'event_type' ); }
+	}
+	if ( $complete ) update_option( 'enc_default_faculty_events_seeded', 1, false );
+}
+
 function enc_register_post_types() {
 	$common = array( 'show_in_rest' => true, 'map_meta_cap' => true );
 

@@ -40,7 +40,7 @@ function enc_require_student_action( $login_return ) {
 		wp_safe_redirect( $login );
 		exit;
 	}
-	if ( ! current_user_can( 'en_register_event' ) && ! current_user_can( 'en_submit_proposal' ) ) wp_die( esc_html__( 'Your account cannot perform this action.', 'eventnest-core' ), '', array( 'response' => 403 ) );
+	if ( ! current_user_can( 'en_submit_proposal' ) && ! ( function_exists( 'enc_user_can_register_for_events' ) && enc_user_can_register_for_events( get_current_user_id() ) ) ) wp_die( esc_html__( 'Your account cannot perform this action.', 'eventnest-core' ), '', array( 'response' => 403 ) );
 }
 
 add_action( 'admin_post_enc_register_event', 'enc_handle_event_registration' );
@@ -196,12 +196,18 @@ function enc_my_proposals_shortcode() {
 		$status = enc_proposal_status( $id );
 		$labels = enc_proposal_statuses();
 		$out .= '<article class="en-student-card"><div class="en-student-card__main"><p class="en-student-card__status en-student-card__status--' . esc_attr( $status ) . '">' . esc_html( isset( $labels[ $status ] ) ? $labels[ $status ] : $status ) . '</p><h2>' . esc_html( $item->post_title ) . '</h2><p class="muted">Submitted ' . esc_html( get_the_date( 'j M Y', $item ) ) . ' · Proposed date ' . esc_html( get_post_meta( $id, '_en_p_date', true ) ) . '</p>';
+		$history = enc_proposal_history( $id );
 		if ( in_array( $status, array( 'submitted', 'under_review' ), true ) ) {
 			$next_stage = enc_proposal_current_stage( $id );
-			$reviewer_label = 'deputy' === $next_stage ? 'Deputy Director' : ( 'faculty' === $next_stage ? 'Faculty / Club Head' : 'reviewer' );
-			$out .= '<p class="muted">Awaiting ' . esc_html( $reviewer_label ) . ' approval. The event will appear in Events after final approval.</p>';
+			if ( 'director' === $next_stage ) $waiting = 'Director or Deputy Director final approval';
+			elseif ( 'initial' === $next_stage ) {
+				$pending = array();
+				if ( ! enc_proposal_stage_approved( $id, 'faculty' ) ) $pending[] = 'Faculty Head';
+				if ( ! enc_proposal_stage_approved( $id, 'admin' ) ) $pending[] = 'Administrator';
+				$waiting = 'approval from ' . implode( ' and ', $pending ) . ( count( $pending ) > 1 ? ' (either may approve first; both are required)' : ' (both initial approvals are required)' );
+			} else $waiting = 'reviewer approval';
+			$out .= '<p class="muted">Awaiting ' . esc_html( $waiting ) . '. The event will appear in Events after final approval.</p>';
 		}
-		$history = enc_proposal_history( $id );
 		if ( $history ) {
 			$out .= '<details class="en-proposal-history"><summary>Review history</summary><ol>';
 			foreach ( $history as $entry ) {
@@ -233,8 +239,13 @@ function enc_my_proposals_shortcode() {
 		$event_id = (int) get_post_meta( $id, '_en_event_id', true );
 		if ( $status === 'published' && $event_id ) $out .= '<p><a class="link-more" href="' . esc_url( get_permalink( $event_id ) ) . '">View published event →</a></p>';
 		elseif ( $status === 'approved' ) $out .= '<p class="muted">Approved. The event is being prepared for the Events page.</p>';
+		if ( $status === 'needs_changes' ) {
+			$change_entry = null;
+			foreach ( array_reverse( (array) $history ) as $entry ) if ( $entry->decision === 'needs_changes' ) { $change_entry = $entry; break; }
+			$out .= '<div class="en-auth__notice en-auth__notice--error" role="status"><strong>Changes requested</strong>' . ( $change_entry && $change_entry->comment ? '<p>' . esc_html( $change_entry->comment ) . '</p>' : '<p>Please review the reviewer notes below.</p>' ) . '</div>';
+			$out .= '<section class="en-resubmit"><h3>Revise this proposal</h3><p class="muted">Edit the proposal below and resubmit it through the approval process.</p>' . enc_proposal_form( $item ) . '</section>';
+		}
 		$out .= '</div></article>';
-		if ( $status === 'needs_changes' ) $out .= '<div class="en-resubmit"><h3>Update your proposal</h3>' . enc_proposal_form( $item ) . '</div>';
 	}
 	return $out . '</div></section>';
 }
