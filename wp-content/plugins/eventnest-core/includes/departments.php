@@ -109,6 +109,17 @@ function enc_sync_club_department( $club_id, $department_id ) {
 
 /** Department scope is enforced on direct post edits and in their admin lists. */
 add_filter( 'map_meta_cap', function ( $caps, $cap, $user_id, $args ) {
+	if ( in_array( $cap, array( 'edit_post', 'delete_post' ), true ) && ! empty( $args[0] ) && 'event' === get_post_type( absint( $args[0] ) ) && 'faculty' === get_post_meta( absint( $args[0] ), '_en_audience', true ) && ! user_can( $user_id, 'manage_options' ) ) return array( 'do_not_allow' );
+	if ( in_array( $cap, array( 'edit_post', 'delete_post', 'read_post' ), true ) && ! empty( $args[0] ) && ! user_can( $user_id, 'manage_options' ) ) {
+		$post_id = absint( $args[0] );
+		$user = get_userdata( $user_id );
+		if ( $user && get_post_type( $post_id ) === 'event' && ( in_array( 'en_club_head', (array) $user->roles, true ) || in_array( 'en_faculty_head', (array) $user->roles, true ) ) ) {
+			$club_id = absint( get_post_meta( $post_id, '_en_club', true ) );
+			$assignment = in_array( 'en_club_head', (array) $user->roles, true ) ? '_en_club_head' : '_en_club_faculty';
+			if ( ! $club_id || absint( get_post_meta( $club_id, $assignment, true ) ) !== (int) $user_id ) return array( 'do_not_allow' );
+			if ( in_array( 'en_faculty_head', (array) $user->roles, true ) ) return $caps;
+		}
+	}
 	if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'read_post' ), true ) || empty( $args[0] ) || user_can( $user_id, 'manage_options' ) || ! enc_user_is_faculty_scope_role( $user_id ) ) return $caps;
 	$post_id = absint( $args[0] );
 	if ( ! in_array( get_post_type( $post_id ), array( 'event', 'proposal' ), true ) ) return $caps;
@@ -123,6 +134,16 @@ add_filter( 'map_meta_cap', function ( $caps, $cap, $user_id, $args ) {
 }, 20, 4 );
 
 add_action( 'pre_get_posts', function ( $query ) {
+	$user = wp_get_current_user();
+	if ( is_admin() && $query->is_main_query() && in_array( 'en_faculty_head', (array) $user->roles, true ) && ! current_user_can( 'manage_options' ) && 'event' === $query->get( 'post_type' ) ) {
+		$club_ids = get_posts( array( 'post_type' => 'club', 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_en_club_faculty', 'meta_value' => $user->ID ) );
+		$query->set( 'meta_query', array_merge( (array) $query->get( 'meta_query' ), $club_ids ? array( array( 'key' => '_en_club', 'value' => array_map( 'absint', $club_ids ), 'compare' => 'IN' ) ) : array( array( 'key' => '_en_club', 'value' => '-1' ) ) ) );
+		return;
+	}
+	if ( is_admin() && $query->is_main_query() && in_array( 'en_club_head', (array) $user->roles, true ) && ! current_user_can( 'manage_options' ) && 'event' === $query->get( 'post_type' ) ) {
+		$club_ids = get_posts( array( 'post_type' => 'club', 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_en_club_head', 'meta_value' => $user->ID ) );
+		$query->set( 'meta_query', array_merge( (array) $query->get( 'meta_query' ), $club_ids ? array( array( 'key' => '_en_club', 'value' => array_map( 'absint', $club_ids ), 'compare' => 'IN' ) ) : array( array( 'key' => '_en_club', 'value' => '-1' ) ) ) );
+	}
 	if ( ! is_admin() || ! $query->is_main_query() || ! enc_user_is_faculty_scope_role( get_current_user_id() ) || current_user_can( 'manage_options' ) ) return;
 	$type = $query->get( 'post_type' );
 	if ( ! in_array( $type, array( 'event', 'proposal' ), true ) ) return;

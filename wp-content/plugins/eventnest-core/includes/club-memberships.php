@@ -209,6 +209,23 @@ function enc_club_membership_panel( $club_id ) {
 
 function enc_my_clubs_shortcode() {
 	if ( ! is_user_logged_in() ) return '<div class="empty"><h2>Log in as a student to view club applications</h2><a class="btn btn--brand" href="' . esc_url( home_url( '/login/' ) ) . '">Log in</a></div>';
+	if ( in_array( 'en_club_head', (array) wp_get_current_user()->roles, true ) ) {
+		$user_id = get_current_user_id();
+		$club_ids = get_posts( array( 'post_type' => 'club', 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_en_club_head', 'meta_value' => $user_id ) );
+		$out = '<section class="section"><div class="wrap"><div class="page-head"><p class="eyebrow eyebrow--small">CLUB MANAGEMENT</p><h1>My clubs</h1><p class="section__sub">Only clubs assigned to you, with their events and registration management.</p></div>';
+		if ( ! $club_ids ) return $out . '<div class="empty"><h2>No club assigned</h2><p>Ask an administrator to assign you as a Club Head.</p></div></div></section>';
+		foreach ( $club_ids as $club_id ) {
+			$out .= '<article class="en-club-application"><h2><a href="' . esc_url( get_permalink( $club_id ) ) . '">' . esc_html( get_the_title( $club_id ) ) . '</a></h2>';
+			$events = get_posts( array( 'post_type' => 'event', 'post_status' => 'publish', 'posts_per_page' => 100, 'meta_key' => '_en_club', 'meta_value' => $club_id, 'orderby' => 'title', 'order' => 'ASC' ) );
+			if ( $events ) {
+				$out .= '<ul>';
+				foreach ( $events as $event ) $out .= '<li><a href="' . esc_url( get_permalink( $event ) ) . '">' . esc_html( $event->post_title ) . '</a> · <a href="' . esc_url( add_query_arg( 'registration_event', $event->ID, home_url( '/event-registrations/' ) ) ) . '">View registrations</a> · <a href="' . esc_url( get_edit_post_link( $event->ID ) ) . '">Manage</a></li>';
+				$out .= '</ul>';
+			} else $out .= '<p class="muted">No published club events yet.</p>';
+			$out .= '<p><a class="btn btn--ghost" href="' . esc_url( admin_url( 'post-new.php?post_type=event' ) ) . '">Create club event</a></p></article>';
+		}
+		return $out . '</div></section>';
+	}
 	if ( ! enc_is_club_student() ) return '<div class="empty"><h2>My Clubs is for student accounts</h2><p>Sign in with a student account to see your applications.</p></div>';
 	global $wpdb;
 	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT m.*, p.post_title FROM ' . enc_club_membership_table() . ' m LEFT JOIN ' . $wpdb->posts . ' p ON p.ID = m.club_id WHERE m.user_id = %d ORDER BY m.created_at DESC', get_current_user_id() ) );

@@ -2,6 +2,10 @@
 get_header();
 while ( have_posts() ) : the_post();
 	$id    = get_the_ID();
+	if ( 'faculty' === get_post_meta( $id, '_en_audience', true ) && ( ! function_exists( 'enc_user_is_faculty' ) || ! enc_user_is_faculty() ) ) {
+		wp_safe_redirect( get_post_type_archive_link( 'event' ) );
+		exit;
+	}
 	$d     = en_card_data( $id );
 	$addr  = en_meta( $id, 'address' );
 	$tix   = en_meta( $id, 'ticket_url' );
@@ -18,6 +22,8 @@ while ( have_posts() ) : the_post();
 	$cancelled = get_post_meta( $id, '_en_cancelled', true );
 	$registered_count = function_exists( 'enc_registration_count' ) ? enc_registration_count( $id ) : 0;
 	$eventnest_registration_state = function_exists( 'enc_event_state' ) ? enc_event_state( $id ) : 'registration_open';
+	$faculty_only = 'faculty' === get_post_meta( $id, '_en_audience', true );
+	$faculty_can_register = function_exists( 'enc_user_is_faculty' ) && enc_user_is_faculty();
 	$is_full = $max_participants && $registered_count >= (int) $max_participants;
 	$map   = trim( $d['venue'] . ' ' . $addr . ' ' . $d['city'] );
 ?>
@@ -87,11 +93,13 @@ while ( have_posts() ) : the_post();
 					<?php elseif ( function_exists( 'enc_register' ) ) : ?>
 						<?php if ( is_user_logged_in() && enc_is_registered( $id, get_current_user_id() ) ) : ?>
 							<p class="ticket-box__note">You are registered for this event.</p><a class="btn btn--ghost btn--block" href="<?php echo esc_url( home_url( '/my-registrations/' ) ); ?>">View my registrations</a>
-						<?php elseif ( $eventnest_registration_state !== 'registration_open' ) : ?>
+						<?php elseif ( function_exists( 'enc_registration_window_open' ) ? ! enc_registration_window_open( $id ) : $eventnest_registration_state !== 'registration_open' ) : ?>
 							<p class="ticket-box__note">Registration is not open for this event.</p>
 						<?php elseif ( ! is_user_logged_in() ) : ?>
 							<a class="btn btn--brand btn--block" href="<?php echo esc_url( add_query_arg( 'redirect_to', $url, home_url( '/login/' ) ) ); ?>">Log in to register</a>
-						<?php elseif ( current_user_can( 'en_register_event' ) ) : ?>
+						<?php elseif ( $faculty_only && ! $faculty_can_register ) : ?>
+							<p class="ticket-box__note">This event is reserved for faculty accounts.</p>
+						<?php elseif ( function_exists( 'enc_user_can_register_for_events' ) && enc_user_can_register_for_events( get_current_user_id() ) ) : ?>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="enc_register_event"><input type="hidden" name="event_id" value="<?php echo esc_attr( $id ); ?>"><?php echo wp_nonce_field( 'enc_register_event_' . $id, 'enc_registration_nonce', true, false ); ?><button class="btn btn--brand btn--block" type="submit"><?php echo $d['price'] === __( 'Free', 'eventnest' ) ? esc_html__( 'Register for free', 'eventnest' ) : esc_html__( 'Register now', 'eventnest' ); ?></button></form>
 						<?php else : ?>
 							<p class="ticket-box__note">A student account is required to register.</p>

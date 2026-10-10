@@ -1,6 +1,6 @@
 # EventNest Core
 Roles, data model, proposal approval and event registration for the EventNest college portal.
-Approval order is the `enc_approval_chain` option (default: faculty -> deputy). Use ['faculty'] for A, or filter `enc_approval_chain`.
+Proposal workflow: Faculty Head and Administrator approvals are both required in either order. A change request pauses the flow until the student edits and resubmits; then both initial approvals are required again. Final approval is by either the Director or Deputy Director.
 
 ## Account pages
 

@@ -37,7 +37,12 @@ function enc_handle_create_competition() {
 
 function enc_render_competition_admin() {
 	if ( ! current_user_can( 'edit_en_events' ) ) return;
-	$posts = get_posts( array( 'post_type' => 'event', 'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ), 'posts_per_page' => 300, 'orderby' => 'date', 'order' => 'DESC', 'tax_query' => array( array( 'taxonomy' => 'event_type', 'field' => 'slug', 'terms' => array( 'competition' ) ) ) ) );
+	$args = array( 'post_type' => 'event', 'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ), 'posts_per_page' => 300, 'orderby' => 'date', 'order' => 'DESC', 'tax_query' => array( array( 'taxonomy' => 'event_type', 'field' => 'slug', 'terms' => array( 'competition' ) ) ) );
+	if ( in_array( 'en_faculty_head', (array) wp_get_current_user()->roles, true ) && ! current_user_can( 'manage_options' ) ) {
+		$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_en_club_faculty', 'meta_value' => get_current_user_id() ) );
+		$args['meta_query'] = array( $clubs ? array( 'key' => '_en_club', 'value' => array_map( 'absint', $clubs ), 'compare' => 'IN' ) : array( 'key' => '_en_club', 'value' => '-1' ) );
+	}
+	$posts = get_posts( $args );
 	echo '<div class="wrap"><h1>Competitions</h1><p>Competitions have their own admin workspace and continue to use EventNest event records, registration history, and public URLs.</p>';
 	if ( isset( $_GET['enc_competition_created'] ) ) echo '<div class="notice notice-success is-dismissible"><p>Competition draft created with the Competition type and Intra-College scope. Complete its title and event details, or change the scope, before publishing.</p></div>';
 	echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_create_competition">' . wp_nonce_field( 'enc_create_competition', 'enc_create_competition_nonce', true, false ) . '<button class="page-title-action" type="submit">Add Competition</button></form><table class="widefat striped" style="margin-top:1rem"><thead><tr><th>Competition</th><th>Status</th><th>Date</th><th>Scope</th><th>Venue</th></tr></thead><tbody>';

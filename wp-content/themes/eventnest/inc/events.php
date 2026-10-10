@@ -244,6 +244,7 @@ function en_upcoming( $n = 6, $extra = array() ) {
 		'meta_key'            => $date_key,
 		'orderby'             => 'meta_value',
 		'order'               => 'ASC',
+		'tax_query'           => array( array( 'taxonomy' => 'event_type', 'field' => 'slug', 'terms' => 'competition', 'operator' => 'NOT IN' ) ),
 
 		'meta_query' => array(
 			array(
@@ -254,6 +255,7 @@ function en_upcoming( $n = 6, $extra = array() ) {
 			),
 		),
 	);
+	if ( ! function_exists( 'enc_user_is_faculty' ) || ! enc_user_is_faculty() ) $defaults['meta_query'][] = array( 'relation' => 'OR', array( 'key' => '_en_audience', 'compare' => 'NOT EXISTS' ), array( 'key' => '_en_audience', 'value' => 'faculty', 'compare' => '!=' ) );
 
 	return new WP_Query(
 		array_merge( $defaults, $extra )
@@ -279,6 +281,7 @@ function en_competitions_shortcode() {
 	$tax_query = array( 'relation' => 'AND', array( 'taxonomy' => 'event_type', 'field' => 'slug', 'terms' => 'competition' ) );
 	if ( $category && taxonomy_exists( 'event_category' ) ) $tax_query[] = array( 'taxonomy' => 'event_category', 'field' => 'slug', 'terms' => $category );
 	$meta_query = array( 'relation' => 'AND', array( 'key' => '_en_date', 'value' => current_time( 'Y-m-d' ), 'compare' => '>=', 'type' => 'DATE' ) );
+	if ( ! function_exists( 'enc_user_is_faculty' ) || ! enc_user_is_faculty() ) $meta_query[] = array( 'relation' => 'OR', array( 'key' => '_en_audience', 'compare' => 'NOT EXISTS' ), array( 'key' => '_en_audience', 'value' => 'faculty', 'compare' => '!=' ) );
 	if ( $when ) {
 		$last_day = 'week' === $when ? wp_date( 'Y-m-d', current_time( 'timestamp' ) + 7 * DAY_IN_SECONDS ) : wp_date( 'Y-m-t' );
 		$meta_query[0] = array( 'key' => '_en_date', 'value' => array( current_time( 'Y-m-d' ), $last_day ), 'compare' => 'BETWEEN', 'type' => 'DATE' );
@@ -477,6 +480,9 @@ add_action( 'pre_get_posts', function ( $q ) {
 	$q->set( 'post_type', 'event' );
 
 	$q->set( 'posts_per_page', 12 );
+	$tax_query = (array) $q->get( 'tax_query' );
+	$tax_query[] = array( 'taxonomy' => 'event_type', 'field' => 'slug', 'terms' => 'competition', 'operator' => 'NOT IN' );
+	$q->set( 'tax_query', $tax_query );
 
 
 	/*
@@ -625,6 +631,8 @@ add_action( 'pre_get_posts', function ( $q ) {
 		'meta_query',
 		$meta_query
 	);
+	if ( ! function_exists( 'enc_user_is_faculty' ) || ! enc_user_is_faculty() ) $meta_query[] = array( 'relation' => 'OR', array( 'key' => '_en_audience', 'compare' => 'NOT EXISTS' ), array( 'key' => '_en_audience', 'value' => 'faculty', 'compare' => '!=' ) );
+	$q->set( 'meta_query', $meta_query );
 
 
 	/*
@@ -633,9 +641,8 @@ add_action( 'pre_get_posts', function ( $q ) {
 	 * -------------------------------------------------------
 	 */
 
-	$tax_query = array(
-		'relation' => 'AND',
-	);
+	$tax_query = (array) $q->get( 'tax_query' );
+	$tax_query['relation'] = 'AND';
 
 
 	/*
@@ -695,14 +702,7 @@ add_action( 'pre_get_posts', function ( $q ) {
 	 * something was actually selected.
 	 */
 
-	if ( count( $tax_query ) > 1 ) {
-
-		$q->set(
-			'tax_query',
-			$tax_query
-		);
-
-	}
+	$q->set( 'tax_query', $tax_query );
 
 
 	/*
