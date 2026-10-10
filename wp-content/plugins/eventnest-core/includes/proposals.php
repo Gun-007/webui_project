@@ -1,9 +1,9 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-/** Legacy descriptor retained for integrations; decisions use parallel first-stage approvals. */
+/** Proposal reviews run in order: Administrator, then Director or Deputy Director. */
 function enc_approval_chain() {
-	$chain = array( 'faculty', 'admin', 'director' );
+	$chain = array( 'admin', 'director' );
 	return apply_filters( 'enc_approval_chain', $chain );
 }
 
@@ -132,6 +132,8 @@ function enc_clean_proposal( array $d ) {
 	}
 	if ( ! $out['type'] || ! term_exists( $out['type'], 'event_type' ) ) return new WP_Error( 'type', 'Please choose an event type.' );
 	if ( ! $out['category'] || ! term_exists( $out['category'], 'event_category' ) ) return new WP_Error( 'category', 'Please choose a category.' );
+	$category_term = get_term( $out['category'], 'event_category' );
+	if ( $category_term && in_array( $category_term->slug, array( 'cultural', 'technical' ), true ) && ! $out['club'] ) return new WP_Error( 'club_required', 'Choose an organizing club so its Faculty Head and Club Head can review this proposal.' );
 	if ( $out['date'] < wp_date( 'Y-m-d' ) ) return new WP_Error( 'date', 'The proposed date must be in the future.' );
 	if ( $out['club'] && ( get_post_type( $out['club'] ) !== 'club' || get_post_status( $out['club'] ) !== 'publish' ) ) return new WP_Error( 'club', 'Please choose an available club.' );
 	if ( $out['club'] ) {
@@ -190,11 +192,18 @@ function enc_proposal_resubmit( $proposal_id, $user_id, array $data ) {
 	}
 }
 
-/** Current phase: both initial reviews, final director/deputy review, or none. */
+/** Cultural/technical club proposals require that club's faculty head and club head first. */
+function enc_proposal_requires_club_review( $id ) {
+	$club_id = absint( get_post_meta( $id, '_en_p_club', true ) );
+	$category = get_term( absint( get_post_meta( $id, '_en_p_category', true ) ), 'event_category' );
+	return $club_id && $category && ! is_wp_error( $category ) && in_array( $category->slug, array( 'cultural', 'technical' ), true );
+}
+
+/** Current phase: assigned club reviewers (when required), administrator, then director/deputy. */
 function enc_proposal_current_stage( $id ) {
 	if ( ! in_array( enc_proposal_status( $id ), array( 'submitted', 'under_review' ), true ) ) return '';
-	if ( ! enc_proposal_stage_approved( $id, 'faculty' ) || ! enc_proposal_stage_approved( $id, 'admin' ) ) return 'initial';
-	return 'director';
+	if ( enc_proposal_requires_club_review( $id ) && ( ! enc_proposal_stage_approved( $id, 'faculty' ) || ! enc_proposal_stage_approved( $id, 'club_head' ) ) ) return 'club';
+	return enc_proposal_stage_approved( $id, 'admin' ) ? 'director' : 'admin';
 }
 
 function enc_user_can_review_faculty_stage( $user_id, $proposal_id ) {
@@ -209,19 +218,30 @@ function enc_user_can_review_faculty_stage( $user_id, $proposal_id ) {
 	return $department && enc_department_for_object( $proposal_id ) === $department;
 }
 
+function enc_user_can_review_club_stage( $user_id, $proposal_id ) {
+	if ( ! enc_proposal_requires_club_review( $proposal_id ) || 'en_club_head' !== enc_user_role( $user_id ) ) return false;
+	$club_id = absint( get_post_meta( $proposal_id, '_en_p_club', true ) );
+	return absint( get_post_meta( $club_id, '_en_club_head', true ) ) === (int) $user_id;
+}
+
 /** Resolve the role stage this reviewer is approving. */
 function enc_proposal_reviewer_stage( $user_id, $proposal_id ) {
-	if ( enc_proposal_current_stage( $proposal_id ) === 'director' ) return 'director';
+	$phase = enc_proposal_current_stage( $proposal_id );
+	if ( 'director' === $phase ) return 'director';
+	if ( 'club' === $phase ) {
+		if ( enc_user_can_review_faculty_stage( $user_id, $proposal_id ) && ! enc_proposal_stage_approved( $proposal_id, 'faculty' ) ) return 'faculty';
+		if ( enc_user_can_review_club_stage( $user_id, $proposal_id ) && ! enc_proposal_stage_approved( $proposal_id, 'club_head' ) ) return 'club_head';
+		return '';
+	}
 	if ( user_can( $user_id, 'manage_options' ) && ! enc_proposal_stage_approved( $proposal_id, 'admin' ) ) return 'admin';
-	if ( ! enc_proposal_stage_approved( $proposal_id, 'faculty' ) && enc_user_can_review_faculty_stage( $user_id, $proposal_id ) ) return 'faculty';
 	return '';
 }
 
 function enc_user_can_review( $user_id, $proposal_id ) {
 	$phase = enc_proposal_current_stage( $proposal_id );
-	if ( 'director' === $phase ) return user_can( $user_id, 'en_review_deputy' );
-	if ( 'initial' !== $phase ) return false;
-	return ( user_can( $user_id, 'manage_options' ) && ! enc_proposal_stage_approved( $proposal_id, 'admin' ) ) || ( ! enc_proposal_stage_approved( $proposal_id, 'faculty' ) && enc_user_can_review_faculty_stage( $user_id, $proposal_id ) );
+	if ( 'director' === $phase ) return in_array( enc_user_role( $user_id ), array( 'en_director', 'en_deputy_director' ), true ) && user_can( $user_id, 'en_review_deputy' );
+	if ( 'club' === $phase ) return ( enc_user_can_review_faculty_stage( $user_id, $proposal_id ) && ! enc_proposal_stage_approved( $proposal_id, 'faculty' ) ) || ( enc_user_can_review_club_stage( $user_id, $proposal_id ) && ! enc_proposal_stage_approved( $proposal_id, 'club_head' ) );
+	return 'admin' === $phase && user_can( $user_id, 'manage_options' );
 }
 
 /** Reviewer decides: 'approve', 'reject' or 'changes'. Reject and changes need a comment. */
@@ -239,11 +259,10 @@ function enc_proposal_decide( $proposal_id, $reviewer_id, $decision, $comment = 
 		if ( ! $stage ) return new WP_Error( 'forbidden', 'You cannot review this proposal right now.' );
 		if ( $decision === 'reject' ) $status = 'rejected';
 		elseif ( $decision === 'changes' ) $status = 'needs_changes';
-		elseif ( 'initial' === $phase ) {
-			$faculty_done = 'faculty' === $stage || enc_proposal_stage_approved( $proposal_id, 'faculty' );
-			$admin_done = 'admin' === $stage || enc_proposal_stage_approved( $proposal_id, 'admin' );
+		elseif ( 'club' === $phase ) $status = 'under_review';
+		elseif ( 'admin' === $phase ) {
 			$status = 'under_review';
-			if ( $faculty_done && $admin_done ) update_post_meta( $proposal_id, '_en_stage', 1 );
+			update_post_meta( $proposal_id, '_en_stage', 1 );
 		} else $status = 'approved';
 		if ( $status === 'approved' ) {
 			$event_id = enc_proposal_make_event( $proposal_id );
@@ -275,7 +294,13 @@ function enc_proposal_make_event( $proposal_id ) {
 	}
 	$thumbnail_id = get_post_thumbnail_id( $proposal_id );
 	if ( $thumbnail_id ) set_post_thumbnail( $event_id, $thumbnail_id );
-	wp_set_object_terms( $event_id, array( (int) get_post_meta( $proposal_id, '_en_p_type', true ) ), 'event_type' );
+	$type_id = absint( get_post_meta( $proposal_id, '_en_p_type', true ) );
+	$type = get_term( $type_id, 'event_type' );
+	if ( $type && ! is_wp_error( $type ) && ( 'competition' === $type->slug || 'competition' === sanitize_title( $type->name ) ) ) {
+		$competition = get_term_by( 'slug', 'competition', 'event_type' );
+		if ( $competition && ! is_wp_error( $competition ) ) $type_id = (int) $competition->term_id;
+	}
+	wp_set_object_terms( $event_id, array( $type_id ), 'event_type' );
 	wp_set_object_terms( $event_id, array( (int) get_post_meta( $proposal_id, '_en_p_category', true ) ), 'event_category' );
 	update_post_meta( $event_id, '_en_date', get_post_meta( $proposal_id, '_en_p_date', true ) );
 	update_post_meta( $event_id, '_en_venue', get_post_meta( $proposal_id, '_en_p_venue', true ) );

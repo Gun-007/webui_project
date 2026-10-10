@@ -26,7 +26,7 @@ function enc_handle_proposal_review() {
 		wp_safe_redirect( add_query_arg( 'review_result', $error, home_url( '/review-proposals/' ) ) );
 		exit;
 	}
-	if ( 'under_review' === $result ) $result = 'initial' === enc_proposal_current_stage( $proposal_id ) ? 'awaiting_approvals' : 'director_review';
+	if ( 'under_review' === $result ) $result = 'director_review';
 	wp_safe_redirect( add_query_arg( 'review_result', sanitize_key( $result ), home_url( '/review-proposals/' ) ) );
 	exit;
 }
@@ -34,12 +34,11 @@ function enc_handle_proposal_review() {
 function enc_review_proposals_shortcode() {
 	if ( ! is_user_logged_in() ) return '<section class="en-auth-card"><h1>Log in to review proposals</h1><a class="btn btn--brand" href="' . esc_url( home_url( '/login/' ) ) . '">Log in</a></section>';
 	$user_id = get_current_user_id();
-	if ( ! current_user_can( 'en_review_faculty' ) && ! current_user_can( 'en_review_deputy' ) && ! current_user_can( 'en_review_override' ) ) return '<section class="en-auth-card"><h1>Reviewer access required</h1><p>Your account cannot review proposals.</p></section>';
+	if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'en_review_deputy' ) && ! current_user_can( 'en_review_override' ) && ! current_user_can( 'en_review_faculty' ) && ! in_array( 'en_club_head', (array) wp_get_current_user()->roles, true ) ) return '<section class="en-auth-card"><h1>Reviewer access required</h1><p>You do not have proposal review access.</p></section>';
 	$items = get_posts( array( 'post_type' => 'proposal', 'post_status' => 'publish', 'posts_per_page' => 200, 'orderby' => 'date', 'order' => 'ASC' ) );
 	$out = '<section class="section"><div class="wrap"><div class="page-head"><p class="eyebrow eyebrow--small">EVENTNEST WORKFLOW</p><h1>Review Proposals</h1><p class="section__sub">Review each submission at the approval stage assigned to you.</p>';
 	$result = isset( $_GET['review_result'] ) ? sanitize_key( wp_unslash( $_GET['review_result'] ) ) : '';
-	if ( $result === 'awaiting_approvals' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Approval recorded. The other initial approval is still required; no later reviewer will receive it yet.</p>';
-	if ( $result === 'director_review' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Both initial approvals are complete. The proposal is now waiting for final Director or Deputy Director approval.</p>';
+	if ( $result === 'director_review' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Administrator approval recorded. The proposal is now waiting for final Director or Deputy Director review.</p>';
 	if ( $result === 'published' ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Final approval recorded. The event is now published in Events.</p>';
 	if ( in_array( $result, array( 'rejected', 'needs_changes' ), true ) ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Your decision has been recorded.</p>';
 	if ( $result === 'error' ) $out .= '<p class="en-auth__notice en-auth__notice--error" role="status">The decision could not be saved. Refresh and check whether the proposal is still awaiting your review.</p>';

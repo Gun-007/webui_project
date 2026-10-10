@@ -171,9 +171,9 @@ function enc_proposal_form( $proposal = null ) {
 	}
 	$out .= '</div><div class="en-auth__row"><label class="en-auth__field"><span>Proposed date *</span><input type="date" required name="proposal_date" min="' . esc_attr( wp_date( 'Y-m-d' ) ) . '" value="' . esc_attr( $value( '', '_en_p_date' ) ) . '"></label><label class="en-auth__field"><span>Expected participants</span><input type="number" min="0" name="proposal_participants" value="' . esc_attr( $value( '', '_en_p_participants' ) ) . '"></label></div>';
 	$out .= '<div class="en-auth__row"><label class="en-auth__field"><span>Venue *</span><input required name="proposal_venue" value="' . esc_attr( $value( '', '_en_p_venue' ) ) . '"></label><label class="en-auth__field"><span>Organizing club</span><select name="proposal_club"><option value="0">No club selected</option>';
-	$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => 'publish', 'numberposts' => 100, 'orderby' => 'title', 'order' => 'ASC' ) );
+	$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 	foreach ( $clubs as $club ) $out .= '<option value="' . esc_attr( $club->ID ) . '"' . selected( (int) $value( '', '_en_p_club' ), (int) $club->ID, false ) . '>' . esc_html( $club->post_title ) . '</option>';
-	$out .= '</select></label><label class="en-auth__field"><span>Department *</span><select required name="proposal_department">' . enc_required_department_choices( (int) $value( '', '_en_department' ) ) . '</select><small>Club proposals inherit their club’s department.</small></label></div>';
+	$out .= '</select></label><label class="en-auth__field"><span>Department *</span><select required name="proposal_department">' . enc_required_department_choices( (int) $value( '', '_en_department' ) ) . '</select><small>Club proposals inherit their club’s department. Select a club for Cultural or Technical proposals.</small></label></div>';
 	if ( $proposal && has_post_thumbnail( $proposal ) ) $out .= '<div class="en-proposal-image-current"><span class="muted">Current proposal photo</span>' . get_the_post_thumbnail( $proposal, 'thumbnail' ) . '</div>';
 	$out .= '<label class="en-auth__field"><span>Event photo <small>(optional, JPG, PNG, GIF, or WebP; max 5 MB' . ( $proposal && has_post_thumbnail( $proposal ) ? '; uploading replaces the current photo' : '' ) . ')</small></span><input type="file" name="proposal_image" accept="image/jpeg,image/png,image/gif,image/webp"></label>';
 	$out .= '<button class="btn btn--brand" type="submit">' . esc_html( $submit_label ) . '</button></form>';
@@ -199,13 +199,7 @@ function enc_my_proposals_shortcode() {
 		$history = enc_proposal_history( $id );
 		if ( in_array( $status, array( 'submitted', 'under_review' ), true ) ) {
 			$next_stage = enc_proposal_current_stage( $id );
-			if ( 'director' === $next_stage ) $waiting = 'Director or Deputy Director final approval';
-			elseif ( 'initial' === $next_stage ) {
-				$pending = array();
-				if ( ! enc_proposal_stage_approved( $id, 'faculty' ) ) $pending[] = 'Faculty Head';
-				if ( ! enc_proposal_stage_approved( $id, 'admin' ) ) $pending[] = 'Administrator';
-				$waiting = 'approval from ' . implode( ' and ', $pending ) . ( count( $pending ) > 1 ? ' (either may approve first; both are required)' : ' (both initial approvals are required)' );
-			} else $waiting = 'reviewer approval';
+			$waiting = 'club' === $next_stage ? 'Faculty Head and Club Head review' : ( 'director' === $next_stage ? 'final approval from Director or Deputy Director' : 'Administrator review' );
 			$out .= '<p class="muted">Awaiting ' . esc_html( $waiting ) . '. The event will appear in Events after final approval.</p>';
 		}
 		if ( $history ) {

@@ -64,7 +64,7 @@ function enc_my_profile_shortcode() {
 	$user_id = get_current_user_id();
 	$user = get_userdata( $user_id );
 	$result = isset( $_GET['profile_result'] ) ? sanitize_key( wp_unslash( $_GET['profile_result'] ) ) : '';
-	$out = '<section class="en-auth-card en-profile-editor"><p class="eyebrow eyebrow--small">YOUR EVENTNEST ACCOUNT</p><h1>My Profile</h1><p class="muted">Keep your contact and study details up to date.</p>';
+	$out = '<section class="en-auth-card en-profile-editor"><p class="eyebrow eyebrow--small">YOUR EVENTNEST ACCOUNT</p><h1>My Profile</h1><p class="muted">Keep your contact and study details up to date.</p><p><a class="btn btn--ghost" href="' . esc_url( home_url( '/dashboard/' ) ) . '">← Back to dashboard</a></p>';
 	if ( 'saved' === $result ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Your profile was updated.</p>';
 	if ( 'invalid' === $result || 'error' === $result ) $out .= '<p class="en-auth__notice en-auth__notice--error" role="status">We could not save those changes. Check your name and email, then try again.</p>';
 	$out .= '<form class="en-auth" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_update_profile">' . wp_nonce_field( 'enc_update_profile_' . $user_id, 'enc_profile_nonce', true, false );

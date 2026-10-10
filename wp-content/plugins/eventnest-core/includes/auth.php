@@ -298,13 +298,15 @@ function enc_dashboard_registration_count( $event_ids = null ) {
 }
 
 function enc_dashboard_proposal_count( $department_id = 0, $club_ids = null ) {
-	$args = array( 'post_type' => 'proposal', 'post_status' => 'publish', 'posts_per_page' => 1, 'fields' => 'ids', 'meta_query' => array( array( 'key' => '_en_status', 'value' => array( 'submitted', 'under_review' ), 'compare' => 'IN' ) ) );
+	$args = array( 'post_type' => 'proposal', 'post_status' => 'publish', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_query' => array( array( 'key' => '_en_status', 'value' => array( 'submitted', 'under_review' ), 'compare' => 'IN' ) ) );
 	if ( $department_id ) $args['meta_query'][] = array( 'key' => '_en_department', 'value' => absint( $department_id ), 'compare' => '=' );
 	if ( is_array( $club_ids ) ) {
 		if ( ! $club_ids ) return 0;
 		$args['meta_query'][] = array( 'key' => '_en_p_club', 'value' => array_map( 'absint', $club_ids ), 'compare' => 'IN' );
 	}
-	return (int) ( new WP_Query( $args ) )->found_posts;
+	$count = 0;
+	foreach ( get_posts( $args ) as $proposal_id ) if ( enc_user_can_review( get_current_user_id(), $proposal_id ) ) $count++;
+	return $count;
 }
 
 function enc_dashboard_metric_cards( $items ) {
@@ -387,7 +389,8 @@ function enc_dashboard_shortcode() {
 	if ( 'pending' === get_user_meta( $user->ID, '_en_account_status', true ) ) $out .= '<p class="en-auth__notice en-auth__notice--error">Your faculty access is pending administrator approval.</p>';
 	if ( in_array( $role, array( 'en_student', 'en_faculty' ), true ) ) {
 		$stats = function_exists( 'enc_student_stats' ) ? enc_student_stats( $user->ID ) : array( 'registered' => 0, 'upcoming' => 0, 'proposals' => 0 );
-		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' ) ) . '</span></p></div>';
+		$course_batch = trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' );
+		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ?: 'Not provided' ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( $course_batch ?: 'Add this in Edit profile' ) . '</span></p></div>';
 		$out .= enc_dashboard_metric_cards( array( array( $stats['registered'], 'Registrations', home_url( '/my-registrations/' ) ), array( $stats['upcoming'], 'Upcoming events', get_post_type_archive_link( 'event' ) ), array( $stats['proposals'], 'Proposals', home_url( '/my-proposals/' ) ), array( $member_count, 'Club memberships', home_url( '/my-clubs/' ) ) ) );
 		$out .= enc_dashboard_action_links( array( array( 'My registrations', home_url( '/my-registrations/' ) ), array( 'My proposals', home_url( '/my-proposals/' ) ), array( 'My clubs', home_url( '/my-clubs/' ) ), array( 'Propose an event', home_url( '/submit-proposal/' ) ), array( 'My stories', home_url( '/my-stories/' ) ) ) );
 	} elseif ( in_array( $role, array( 'administrator', 'en_director', 'en_deputy_director', 'en_faculty_head', 'en_faculty', 'en_club_head' ), true ) ) {
@@ -399,7 +402,7 @@ function enc_dashboard_shortcode() {
 		$registrations = $all_access ? enc_dashboard_registration_count() : enc_dashboard_registration_count( array_merge( $event_ids, $competition_ids ) );
 		$proposals = $missing_department ? 0 : enc_dashboard_proposal_count( $department_scope, 'en_club_head' === $role ? $club_ids : null );
 		$registration_url = function_exists( 'enc_registration_scope' ) && enc_registration_scope() ? home_url( '/event-registrations/' ) : '';
-		$proposal_url = 'en_club_head' !== $role && ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) ? home_url( '/review-proposals/' ) : '';
+		$proposal_url = current_user_can( 'manage_options' ) || in_array( $role, array( 'en_director', 'en_deputy_director', 'en_faculty_head', 'en_club_head' ), true ) ? home_url( '/review-proposals/' ) : '';
 		$metrics = array( array( count( $event_ids ), 'Live events', get_post_type_archive_link( 'event' ) ), array( count( $competition_ids ), 'Live competitions', home_url( '/competitions/' ) ), array( $registrations, 'Registrations in my scope', $registration_url ), array( $proposals, 'Proposals to review', $proposal_url ) );
 		if ( 'en_club_head' === $role && function_exists( 'enc_student_stats' ) ) { $mine = enc_student_stats( $user->ID ); $metrics[] = array( $mine['registered'], 'My registrations', home_url( '/my-registrations/' ) ); }
 		if ( 'administrator' === $role || 'en_director' === $role ) {
@@ -412,9 +415,9 @@ function enc_dashboard_shortcode() {
 		$links = array();
 		$links[] = array( 'Edit profile', home_url( '/my-profile/' ) );
 		if ( 'administrator' === $role ) {
-			$links = array( array( 'Manage events · edit or delete', admin_url( 'edit.php?post_type=event' ) ), array( 'Manage competitions · edit or delete', admin_url( 'edit.php?post_type=event&page=enc-competitions' ) ), array( 'Manage clubs · edit or delete', admin_url( 'edit.php?post_type=club' ) ), array( 'Club leadership', admin_url( 'edit.php?post_type=club&page=enc-club-leadership' ) ), array( 'Review proposals', home_url( '/review-proposals/' ) ), array( 'Event registrations', home_url( '/event-registrations/' ) ), array( 'Student stories', admin_url( 'edit.php?post_type=student_story' ) ), array( 'Faculty requests', home_url( '/dashboard/#en-staff-approvals' ) ), array( 'Manage / audit accounts', admin_url( 'users.php?page=enc-accounts' ) ), array( 'All users', admin_url( 'users.php' ) ) );
+			$links = array( array( 'Add event', admin_url( 'post-new.php?post_type=event' ) ), array( 'Add competition', admin_url( 'edit.php?post_type=event&page=enc-competitions' ) ), array( 'Add club', admin_url( 'post-new.php?post_type=club' ) ), array( 'Assign Club and Faculty Heads', admin_url( 'edit.php?post_type=club&page=enc-club-leadership' ) ), array( 'Manage events', admin_url( 'edit.php?post_type=event' ) ), array( 'Manage competitions', admin_url( 'edit.php?post_type=event&page=enc-competitions' ) ), array( 'Manage clubs', admin_url( 'edit.php?post_type=club' ) ), array( 'Review proposals', home_url( '/review-proposals/' ) ), array( 'Event registrations', home_url( '/event-registrations/' ) ), array( 'Student stories', admin_url( 'edit.php?post_type=student_story' ) ), array( 'Faculty requests', home_url( '/dashboard/#en-staff-approvals' ) ), array( 'Manage / audit accounts', admin_url( 'users.php?page=enc-accounts' ) ), array( 'All users', admin_url( 'users.php' ) ) );
 		} else {
-			if ( 'en_club_head' !== $role && ( current_user_can( 'en_review_faculty' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) ) $links[] = array( 'Review proposals', home_url( '/review-proposals/' ) );
+			if ( current_user_can( 'manage_options' ) || current_user_can( 'en_review_deputy' ) || current_user_can( 'en_review_override' ) ) $links[] = array( 'Review proposals', home_url( '/review-proposals/' ) );
 			if ( function_exists( 'enc_registration_scope' ) && enc_registration_scope() ) $links[] = array( 'View event registrations', home_url( '/event-registrations/' ) );
 			if ( 'administrator' === $role ) $links[] = array( 'Staff account requests', home_url( '/dashboard/#en-staff-approvals' ) );
 			if ( 'en_club_head' === $role ) {

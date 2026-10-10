@@ -93,6 +93,16 @@ function enc_seed_default_faculty_events() {
 	if ( $complete ) update_option( 'enc_default_faculty_events_seeded', 1, false );
 }
 
+/** Ensure faculty-only pages have an upcoming faculty event. */
+add_action( 'init', function () {
+	if ( ! post_type_exists( 'event' ) || ! taxonomy_exists( 'event_type' ) || get_posts( array( 'post_type' => 'event', 'name' => 'faculty-development-workshop', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) ) ) return;
+	$admins = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+	if ( ! $admins ) return;
+	$date = wp_date( 'Y-m-d', current_time( 'timestamp' ) + 14 * DAY_IN_SECONDS );
+	$id = wp_insert_post( array( 'post_type' => 'event', 'post_status' => 'publish', 'post_name' => 'faculty-development-workshop', 'post_title' => 'Faculty Development Workshop', 'post_content' => 'A campus session for faculty to share teaching practices and connect with colleagues.', 'post_author' => (int) $admins[0], 'meta_input' => array( '_en_date' => $date, '_en_start' => '09:30', '_en_end' => '12:00', '_en_venue' => 'Conference Room', '_en_deadline' => $date, '_en_max' => 100, '_en_fee' => 0, '_en_audience' => 'faculty' ) ), true );
+	if ( ! is_wp_error( $id ) ) { $term = get_term_by( 'slug', 'workshop', 'event_type' ); if ( $term ) wp_set_object_terms( $id, (int) $term->term_id, 'event_type' ); }
+}, 20 );
+
 function enc_register_post_types() {
 	$common = array( 'show_in_rest' => true, 'map_meta_cap' => true );
 
@@ -198,6 +208,7 @@ function enc_event_fields() {
 		'_en_team_min'  => array( 'Team size min (0 = individual only)', 'number' ),
 		'_en_team_max'  => array( 'Team size max', 'number' ),
 		'_en_cancelled' => array( 'Event cancelled', 'checkbox' ),
+		'_en_audience'  => array( 'Who can attend', 'select', array( '' => 'Everyone', 'faculty' => 'Faculty only' ) ),
 	);
 }
 
