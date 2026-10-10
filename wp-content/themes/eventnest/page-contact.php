@@ -1,47 +1,28 @@
 <?php
 /**
- * EventNest Contact Us page.
- *
- * Used automatically for a page with the slug "contact".
+ * EventNest Contact page for pages with the "contact" slug.
  */
 get_header();
-
-$team = array(
-	array( 'name' => 'Aashriya Chauhan', 'email' => 'aac@sicsr.ac.in' ),
-	array( 'name' => 'Daksh Arora', 'email' => 'daa@sicsr.ac.in' ),
-	array( 'name' => 'Vedant Choudhary', 'email' => 'vec@sicsr.ac.in' ),
-	array( 'name' => 'Nishit Gupta', 'email' => 'nig@sicsr.ac.in' ),
-);
 ?>
-
-<section class="en-contact-hero">
+<section class="page-head">
 	<div class="wrap">
-		<p class="eyebrow eyebrow--small"><?php esc_html_e( 'WE WOULD LOVE TO HEAR FROM YOU', 'eventnest' ); ?></p>
+		<p class="eyebrow eyebrow--small"><?php esc_html_e( 'EVENTNEST SUPPORT', 'eventnest' ); ?></p>
 		<h1><?php esc_html_e( 'Contact Us', 'eventnest' ); ?></h1>
-		<p class="en-contact-hero__lead"><?php esc_html_e( 'Have a question or feedback about EventNest? Get in touch with our team.', 'eventnest' ); ?></p>
+		<p class="section__sub"><?php esc_html_e( 'Find the right place to get help with your campus account, events, or clubs.', 'eventnest' ); ?></p>
 	</div>
 </section>
-
-<section class="section en-contact-section">
-	<div class="wrap">
-		<div class="section__head">
-			<div>
-				<p class="eyebrow eyebrow--small"><?php esc_html_e( 'THE EVENTNEST TEAM', 'eventnest' ); ?></p>
-				<h2><?php esc_html_e( 'Reach out to us', 'eventnest' ); ?></h2>
-			</div>
-		</div>
-		<div class="en-contact-grid">
-			<?php foreach ( $team as $member ) : ?>
-				<article class="en-contact-card">
-					<span class="en-contact-card__number" aria-hidden="true"><?php echo esc_html( strtoupper( substr( $member['name'], 0, 1 ) ) ); ?></span>
-					<div>
-						<h3><?php echo esc_html( $member['name'] ); ?></h3>
-						<a class="en-contact-card__email" href="mailto:<?php echo esc_attr( $member['email'] ); ?>"><?php echo esc_html( $member['email'] ); ?></a>
-					</div>
-				</article>
-			<?php endforeach; ?>
-		</div>
+<section class="section">
+	<div class="wrap grid event-grid">
+		<article class="event-panel">
+			<h2><?php esc_html_e( 'Account help', 'eventnest' ); ?></h2>
+			<p><?php esc_html_e( 'For account access, registration, or profile questions, contact your department or the site administrator.', 'eventnest' ); ?></p>
+			<a class="link-more" href="<?php echo esc_url( home_url( '/dashboard/' ) ); ?>"><?php esc_html_e( 'Go to your dashboard', 'eventnest' ); ?> <span aria-hidden="true">→</span></a>
+		</article>
+		<article class="event-panel">
+			<h2><?php esc_html_e( 'Event and club questions', 'eventnest' ); ?></h2>
+			<p><?php esc_html_e( 'Open an event or club page for its current details and organizer information.', 'eventnest' ); ?></p>
+			<a class="link-more" href="<?php echo esc_url( get_post_type_archive_link( 'event' ) ); ?>"><?php esc_html_e( 'Browse events', 'eventnest' ); ?> <span aria-hidden="true">→</span></a>
+		</article>
 	</div>
 </section>
-
 <?php get_footer(); ?>

@@ -171,7 +171,7 @@ add_action( 'admin_post_enc_approve_faculty', function () {
 	if ( 'en_faculty_head' === $role && ! $department_id ) {
 		enc_staff_approval_redirect( 'department_required' );
 	}
-	if ( in_array( $role, array( 'en_faculty_head', 'en_club_head' ), true ) && ( ! $club_id || get_post_type( $club_id ) !== 'club' ) ) enc_staff_approval_redirect( 'club_required' );
+	if ( 'en_club_head' === $role && ( ! $club_id || get_post_type( $club_id ) !== 'club' ) ) enc_staff_approval_redirect( 'club_required' );
 	if ( $department_id && ( get_post_type( $department_id ) !== 'faculty_department' || get_post_status( $department_id ) !== 'publish' ) ) {
 		enc_staff_approval_redirect( 'invalid' );
 	}
@@ -179,7 +179,6 @@ add_action( 'admin_post_enc_approve_faculty', function () {
 	if ( $department_id && in_array( $role, array( 'en_faculty', 'en_faculty_head' ), true ) ) update_user_meta( $user_id, '_en_department', $department_id );
 	else delete_user_meta( $user_id, '_en_department' );
 	update_user_meta( $user_id, '_en_account_status', 'approved' );
-	if ( 'en_faculty_head' === $role ) update_post_meta( $club_id, '_en_club_faculty', $user_id );
 	if ( 'en_club_head' === $role ) update_post_meta( $club_id, '_en_club_head', $user_id );
 	enc_staff_approval_redirect( 'approved' );
 } );
@@ -198,7 +197,7 @@ function enc_dashboard_staff_approval_queue() {
 	$result = isset( $_GET['request_result'] ) ? sanitize_key( wp_unslash( $_GET['request_result'] ) ) : '';
 	if ( 'approved' === $result ) $out .= '<p class="en-dashboard-note">Account approved and role assigned.</p>';
 	elseif ( 'department_required' === $result ) $out .= '<p class="en-dashboard-note">Choose a department to approve someone as Faculty Head.</p>';
-	elseif ( 'club_required' === $result ) $out .= '<p class="en-dashboard-note">Choose a club for this Faculty Head or Club Head.</p>';
+	elseif ( 'club_required' === $result ) $out .= '<p class="en-dashboard-note">Choose a club before approving this Club Head.</p>';
 	elseif ( 'invalid' === $result ) $out .= '<p class="en-dashboard-note">That request could not be processed. Refresh and try again.</p>';
 	if ( ! $requests ) return $out . '<p class="en-dashboard-note">No staff requests are waiting for approval.</p></section>';
 	foreach ( $requests as $user ) {
@@ -209,7 +208,7 @@ function enc_dashboard_staff_approval_queue() {
 		$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => 'publish', 'posts_per_page' => 200, 'orderby' => 'title', 'order' => 'ASC' ) );
 		$club_options = '<option value="0">Choose a club</option>';
 		foreach ( $clubs as $club ) $club_options .= '<option value="' . (int) $club->ID . '">' . esc_html( $club->post_title ) . '</option>';
-		$out .= '<form class="en-approval-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_approve_faculty"><input type="hidden" name="user_id" value="' . esc_attr( $id ) . '"><input type="hidden" name="return_to" value="' . esc_url( home_url( '/dashboard/#en-staff-approvals' ) ) . '">' . wp_nonce_field( 'enc_approve_faculty_' . $id, 'enc_approval_nonce', true, false ) . '<label><span>Approve as</span><select name="eventnest_role"><option value="en_faculty">Faculty</option><option value="en_faculty_head">Faculty Head</option><option value="en_club_head">Club Head</option><option value="en_director">Director</option><option value="en_deputy_director">Deputy Director</option></select></label><label><span>Department</span><select name="department_id">' . enc_department_choices() . '</select></label><label><span>Club assignment</span><select name="club_id">' . $club_options . '</select></label><button class="btn btn--brand" type="submit">Approve request</button></form></article>';
+		$out .= '<form class="en-approval-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_approve_faculty"><input type="hidden" name="user_id" value="' . esc_attr( $id ) . '"><input type="hidden" name="return_to" value="' . esc_url( home_url( '/dashboard/#en-staff-approvals' ) ) . '">' . wp_nonce_field( 'enc_approve_faculty_' . $id, 'enc_approval_nonce', true, false ) . '<label><span>Approve as</span><select name="eventnest_role"><option value="en_faculty">Faculty</option><option value="en_faculty_head">Faculty Head</option><option value="en_club_head">Club Head</option><option value="en_director">Director</option><option value="en_deputy_director">Deputy Director</option></select></label><label><span>Department</span><select name="department_id">' . enc_department_choices() . '</select></label><label><span>Club (Club Head only)</span><select name="club_id">' . $club_options . '</select></label><button class="btn btn--brand" type="submit">Approve request</button></form></article>';
 	}
 	return $out . '</section>';
 }
@@ -382,10 +381,10 @@ function enc_dashboard_shortcode() {
 	}
 	$labels = array( 'en_student' => 'Student Dashboard', 'en_faculty' => 'Faculty Dashboard', 'en_faculty_head' => 'Faculty Head Dashboard', 'en_club_head' => 'Club Head Dashboard', 'en_deputy_director' => 'Deputy Director Dashboard', 'en_director' => 'Director Dashboard', 'administrator' => 'Admin Dashboard', 'subscriber' => 'Account awaiting approval' );
 	$title = isset( $labels[ $role ] ) ? $labels[ $role ] : 'EventNest Dashboard';
-	$out = '<section class="en-dashboard-page"><header class="en-dashboard-heading"><p class="eyebrow eyebrow--small">EVENTNEST WORKSPACE</p><h1>' . esc_html( $title ) . '</h1><p>Welcome, ' . esc_html( $user->display_name ) . '.</p></header>';
+	$out = '<section class="en-auth-card en-dashboard en-dashboard-page"><header class="en-dashboard-heading"><p class="eyebrow eyebrow--small">EVENTNEST WORKSPACE</p><h1>' . esc_html( $title ) . '</h1><p>Welcome, ' . esc_html( $user->display_name ) . '.</p></header>';
 	$out .= enc_dashboard_action_links( array( array( 'Edit profile', home_url( '/my-profile/' ) ) ) );
 	if ( 'pending' === get_user_meta( $user->ID, '_en_account_status', true ) ) $out .= '<p class="en-auth__notice en-auth__notice--error">Your faculty access is pending administrator approval.</p>';
-	if ( in_array( $role, array( 'en_student', 'en_faculty' ), true ) ) {
+	if ( 'en_student' === $role ) {
 		$stats = function_exists( 'enc_student_stats' ) ? enc_student_stats( $user->ID ) : array( 'registered' => 0, 'upcoming' => 0, 'proposals' => 0 );
 		$out .= '<div class="en-profile"><p><strong>PRN</strong><span>' . esc_html( get_user_meta( $user->ID, '_en_prn', true ) ) . '</span></p><p><strong>Email</strong><span>' . esc_html( $user->user_email ) . '</span></p><p><strong>Course / batch</strong><span>' . esc_html( trim( get_user_meta( $user->ID, '_en_course', true ) . ' · ' . get_user_meta( $user->ID, '_en_batch', true ), ' ·' ) ) . '</span></p></div>';
 		$out .= enc_dashboard_metric_cards( array( array( $stats['registered'], 'Registrations', home_url( '/my-registrations/' ) ), array( $stats['upcoming'], 'Upcoming events', get_post_type_archive_link( 'event' ) ), array( $stats['proposals'], 'Proposals', home_url( '/my-proposals/' ) ), array( $member_count, 'Club memberships', home_url( '/my-clubs/' ) ) ) );

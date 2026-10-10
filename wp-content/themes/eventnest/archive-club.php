@@ -25,7 +25,7 @@ $search = isset( $_GET['club_search'] ) ? sanitize_text_field( wp_unslash( $_GET
 						<div class="en-club-card__body">
 							<h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
 							<?php if ( has_excerpt() || get_the_content() ) : ?><p><?php echo esc_html( wp_trim_words( get_the_excerpt(), 22 ) ); ?></p><?php endif; ?>
-							<a class="link-more" href="<?php the_permalink(); ?>">View club <span aria-hidden="true">â†’</span></a>
+							<a class="link-more" href="<?php the_permalink(); ?>">View club <span aria-hidden="true">→</span></a>
 							<?php if ( function_exists( 'en_frontend_post_actions' ) ) en_frontend_post_actions( get_the_ID() ); ?>
 						</div>
 					</article>

@@ -41,7 +41,7 @@ function enc_role_map() {
 		),
 		'en_faculty' => array(
 			'label' => 'Faculty',
-			'caps'  => array_merge( array( 'read', 'upload_files', 'en_register_event', 'en_submit_proposal', 'en_submit_story' ), $ann_own ),
+			'caps'  => array_merge( array( 'read', 'upload_files', 'en_register_event', 'en_submit_proposal', 'en_view_registrations' ), $events_own, $ann_own ),
 		),
 		'en_faculty_head' => array(
 			'label' => 'Faculty Head',
@@ -49,7 +49,7 @@ function enc_role_map() {
 		),
 		'en_club_head' => array(
 			'label' => 'Club Head',
-			'caps'  => array_merge( array( 'read', 'upload_files', 'en_register_event', 'en_submit_proposal', 'en_submit_story', 'en_view_registrations' ), $events_own, $ann_own ),
+			'caps'  => array_merge( array( 'read', 'upload_files', 'en_register_event', 'en_submit_proposal', 'en_view_registrations' ), $events_own, $ann_own ),
 		),
 		'en_deputy_director' => array(
 			'label' => 'Deputy Director',

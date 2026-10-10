@@ -25,7 +25,8 @@ add_action( 'admin_post_nopriv_enc_submit_story', 'enc_handle_story_submission' 
 
 function enc_story_is_student( $user_id = 0 ) {
 	$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
-	return $user_id && user_can( $user_id, 'en_submit_story' );
+	$user = $user_id ? get_userdata( $user_id ) : false;
+	return $user && ( in_array( 'en_student', (array) $user->roles, true ) || in_array( 'en_club_head', (array) $user->roles, true ) );
 }
 
 add_action( 'admin_post_enc_review_story', function () {
