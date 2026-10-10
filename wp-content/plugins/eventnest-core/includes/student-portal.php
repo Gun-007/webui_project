@@ -40,7 +40,7 @@ function enc_require_student_action( $login_return ) {
 		wp_safe_redirect( $login );
 		exit;
 	}
-	if ( ! current_user_can( 'en_register_event' ) && ! current_user_can( 'en_submit_proposal' ) ) wp_die( esc_html__( 'Your account cannot perform this action.', 'eventnest-core' ), '', array( 'response' => 403 ) );
+	if ( ! current_user_can( 'en_submit_proposal' ) && ! ( function_exists( 'enc_user_can_register_for_events' ) && enc_user_can_register_for_events( get_current_user_id() ) ) ) wp_die( esc_html__( 'Your account cannot perform this action.', 'eventnest-core' ), '', array( 'response' => 403 ) );
 }
 
 add_action( 'admin_post_enc_register_event', 'enc_handle_event_registration' );
@@ -171,9 +171,9 @@ function enc_proposal_form( $proposal = null ) {
 	}
 	$out .= '</div><div class="en-auth__row"><label class="en-auth__field"><span>Proposed date *</span><input type="date" required name="proposal_date" min="' . esc_attr( wp_date( 'Y-m-d' ) ) . '" value="' . esc_attr( $value( '', '_en_p_date' ) ) . '"></label><label class="en-auth__field"><span>Expected participants</span><input type="number" min="0" name="proposal_participants" value="' . esc_attr( $value( '', '_en_p_participants' ) ) . '"></label></div>';
 	$out .= '<div class="en-auth__row"><label class="en-auth__field"><span>Venue *</span><input required name="proposal_venue" value="' . esc_attr( $value( '', '_en_p_venue' ) ) . '"></label><label class="en-auth__field"><span>Organizing club</span><select name="proposal_club"><option value="0">No club selected</option>';
-	$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => 'publish', 'numberposts' => 100, 'orderby' => 'title', 'order' => 'ASC' ) );
+	$clubs = get_posts( array( 'post_type' => 'club', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 	foreach ( $clubs as $club ) $out .= '<option value="' . esc_attr( $club->ID ) . '"' . selected( (int) $value( '', '_en_p_club' ), (int) $club->ID, false ) . '>' . esc_html( $club->post_title ) . '</option>';
-	$out .= '</select></label><label class="en-auth__field"><span>Department *</span><select required name="proposal_department">' . enc_required_department_choices( (int) $value( '', '_en_department' ) ) . '</select><small>Club proposals inherit their club’s department.</small></label></div>';
+	$out .= '</select></label><label class="en-auth__field"><span>Department *</span><select required name="proposal_department">' . enc_required_department_choices( (int) $value( '', '_en_department' ) ) . '</select><small>Club proposals inherit their club’s department. Select a club for Cultural or Technical proposals.</small></label></div>';
 	if ( $proposal && has_post_thumbnail( $proposal ) ) $out .= '<div class="en-proposal-image-current"><span class="muted">Current proposal photo</span>' . get_the_post_thumbnail( $proposal, 'thumbnail' ) . '</div>';
 	$out .= '<label class="en-auth__field"><span>Event photo <small>(optional, JPG, PNG, GIF, or WebP; max 5 MB' . ( $proposal && has_post_thumbnail( $proposal ) ? '; uploading replaces the current photo' : '' ) . ')</small></span><input type="file" name="proposal_image" accept="image/jpeg,image/png,image/gif,image/webp"></label>';
 	$out .= '<button class="btn btn--brand" type="submit">' . esc_html( $submit_label ) . '</button></form>';
@@ -196,12 +196,12 @@ function enc_my_proposals_shortcode() {
 		$status = enc_proposal_status( $id );
 		$labels = enc_proposal_statuses();
 		$out .= '<article class="en-student-card"><div class="en-student-card__main"><p class="en-student-card__status en-student-card__status--' . esc_attr( $status ) . '">' . esc_html( isset( $labels[ $status ] ) ? $labels[ $status ] : $status ) . '</p><h2>' . esc_html( $item->post_title ) . '</h2><p class="muted">Submitted ' . esc_html( get_the_date( 'j M Y', $item ) ) . ' · Proposed date ' . esc_html( get_post_meta( $id, '_en_p_date', true ) ) . '</p>';
+		$history = enc_proposal_history( $id );
 		if ( in_array( $status, array( 'submitted', 'under_review' ), true ) ) {
 			$next_stage = enc_proposal_current_stage( $id );
-			$reviewer_label = 'deputy' === $next_stage ? 'Deputy Director' : ( 'faculty' === $next_stage ? 'Faculty / Club Head' : 'reviewer' );
-			$out .= '<p class="muted">Awaiting ' . esc_html( $reviewer_label ) . ' approval. The event will appear in Events after final approval.</p>';
+			$waiting = 'club' === $next_stage ? 'Faculty Head and Club Head review' : ( 'director' === $next_stage ? 'final approval from Director or Deputy Director' : 'Administrator review' );
+			$out .= '<p class="muted">Awaiting ' . esc_html( $waiting ) . '. The event will appear in Events after final approval.</p>';
 		}
-		$history = enc_proposal_history( $id );
 		if ( $history ) {
 			$out .= '<details class="en-proposal-history"><summary>Review history</summary><ol>';
 			foreach ( $history as $entry ) {
@@ -233,8 +233,13 @@ function enc_my_proposals_shortcode() {
 		$event_id = (int) get_post_meta( $id, '_en_event_id', true );
 		if ( $status === 'published' && $event_id ) $out .= '<p><a class="link-more" href="' . esc_url( get_permalink( $event_id ) ) . '">View published event →</a></p>';
 		elseif ( $status === 'approved' ) $out .= '<p class="muted">Approved. The event is being prepared for the Events page.</p>';
+		if ( $status === 'needs_changes' ) {
+			$change_entry = null;
+			foreach ( array_reverse( (array) $history ) as $entry ) if ( $entry->decision === 'needs_changes' ) { $change_entry = $entry; break; }
+			$out .= '<div class="en-auth__notice en-auth__notice--error" role="status"><strong>Changes requested</strong>' . ( $change_entry && $change_entry->comment ? '<p>' . esc_html( $change_entry->comment ) . '</p>' : '<p>Please review the reviewer notes below.</p>' ) . '</div>';
+			$out .= '<section class="en-resubmit"><h3>Revise this proposal</h3><p class="muted">Edit the proposal below and resubmit it through the approval process.</p>' . enc_proposal_form( $item ) . '</section>';
+		}
 		$out .= '</div></article>';
-		if ( $status === 'needs_changes' ) $out .= '<div class="en-resubmit"><h3>Update your proposal</h3>' . enc_proposal_form( $item ) . '</div>';
 	}
 	return $out . '</div></section>';
 }

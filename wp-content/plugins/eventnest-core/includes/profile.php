@@ -25,8 +25,8 @@ function enc_profile_redirect( $result ) {
 }
 
 function enc_handle_profile_update() {
-	if ( ! is_user_logged_in() || enc_user_role() !== 'en_student' ) {
-		wp_die( esc_html__( 'Only signed-in students can update this profile.', 'eventnest-core' ), '', array( 'response' => 403 ) );
+	if ( ! is_user_logged_in() ) {
+		wp_die( esc_html__( 'Sign in to update your profile.', 'eventnest-core' ), '', array( 'response' => 403 ) );
 	}
 
 	$user_id = get_current_user_id();
@@ -61,12 +61,10 @@ function enc_my_profile_shortcode() {
 		$login_url = add_query_arg( 'redirect_to', home_url( '/my-profile/' ), home_url( '/login/' ) );
 		return '<section class="en-auth-card"><h1>Log in to view your profile</h1><a class="btn btn--brand" href="' . esc_url( $login_url ) . '">Log in</a></section>';
 	}
-	if ( enc_user_role() !== 'en_student' ) return '<section class="en-auth-card"><h1>Student profile</h1><p>This profile page is available to student accounts.</p></section>';
-
 	$user_id = get_current_user_id();
 	$user = get_userdata( $user_id );
 	$result = isset( $_GET['profile_result'] ) ? sanitize_key( wp_unslash( $_GET['profile_result'] ) ) : '';
-	$out = '<section class="en-auth-card en-profile-editor"><p class="eyebrow eyebrow--small">YOUR EVENTNEST ACCOUNT</p><h1>My Profile</h1><p class="muted">Keep your contact and study details up to date.</p>';
+	$out = '<section class="en-auth-card en-profile-editor"><p class="eyebrow eyebrow--small">YOUR EVENTNEST ACCOUNT</p><h1>My Profile</h1><p class="muted">Keep your contact and study details up to date.</p><p><a class="btn btn--ghost" href="' . esc_url( home_url( '/dashboard/' ) ) . '">← Back to dashboard</a></p>';
 	if ( 'saved' === $result ) $out .= '<p class="en-auth__notice en-auth__notice--success" role="status">Your profile was updated.</p>';
 	if ( 'invalid' === $result || 'error' === $result ) $out .= '<p class="en-auth__notice en-auth__notice--error" role="status">We could not save those changes. Check your name and email, then try again.</p>';
 	$out .= '<form class="en-auth" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="enc_update_profile">' . wp_nonce_field( 'enc_update_profile_' . $user_id, 'enc_profile_nonce', true, false );

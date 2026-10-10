@@ -8,8 +8,8 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ENC_VERSION', '0.9.1' );
-define( 'ENC_DB_VERSION', '6' );
+define( 'ENC_VERSION', '0.9.2' );
+define( 'ENC_DB_VERSION', '9' );
 define( 'ENC_DIR', plugin_dir_path( __FILE__ ) );
 
 require_once ENC_DIR . 'includes/roles.php';

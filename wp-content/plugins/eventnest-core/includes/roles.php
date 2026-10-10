@@ -15,6 +15,7 @@ function enc_custom_caps() {
 	return array(
 		'en_register_event',   // sign up for events and competitions
 		'en_submit_proposal',  // submit event proposals
+		'en_submit_story',     // submit student stories
 		'en_review_faculty',   // review stage: faculty / club head
 		'en_review_deputy',    // review stage: deputy director
 		'en_review_override',  // may act on any stage (director)
@@ -36,11 +37,11 @@ function enc_role_map() {
 	return array(
 		'en_student' => array(
 			'label' => 'Student',
-			'caps'  => array( 'read', 'en_register_event', 'en_submit_proposal' ),
+			'caps'  => array( 'read', 'en_register_event', 'en_submit_proposal', 'en_submit_story' ),
 		),
 		'en_faculty' => array(
 			'label' => 'Faculty',
-			'caps'  => array_merge( array( 'read', 'upload_files', 'en_review_faculty' ), $ann_own ),
+			'caps'  => array_merge( array( 'read', 'upload_files', 'en_register_event', 'en_submit_proposal', 'en_submit_story' ), $ann_own ),
 		),
 		'en_faculty_head' => array(
 			'label' => 'Faculty Head',
@@ -48,7 +49,7 @@ function enc_role_map() {
 		),
 		'en_club_head' => array(
 			'label' => 'Club Head',
-			'caps'  => array_merge( array( 'read', 'upload_files', 'en_review_faculty', 'en_view_registrations' ), $events_own, $ann_own ),
+			'caps'  => array_merge( array( 'read', 'upload_files', 'en_register_event', 'en_submit_proposal', 'en_submit_story', 'en_view_registrations' ), $events_own, $ann_own ),
 		),
 		'en_deputy_director' => array(
 			'label' => 'Deputy Director',
@@ -56,7 +57,7 @@ function enc_role_map() {
 		),
 		'en_director' => array(
 			'label' => 'Director',
-			'caps'  => array_merge( array( 'read', 'en_review_deputy', 'en_review_override', 'en_view_registrations', 'en_view_analytics', 'en_approve_accounts' ), $events_full, $clubs_full, $ann_full ),
+			'caps'  => array_merge( array( 'read', 'en_review_deputy', 'en_review_override', 'en_view_registrations', 'en_view_analytics' ), $events_full, $clubs_full, $ann_full ),
 		),
 	);
 }
