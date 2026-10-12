@@ -384,7 +384,8 @@ function enc_dashboard_shortcode() {
 	}
 	$labels = array( 'en_student' => 'Student Dashboard', 'en_faculty' => 'Faculty Dashboard', 'en_faculty_head' => 'Faculty Head Dashboard', 'en_club_head' => 'Club Head Dashboard', 'en_deputy_director' => 'Deputy Director Dashboard', 'en_director' => 'Director Dashboard', 'administrator' => 'Admin Dashboard', 'subscriber' => 'Account awaiting approval' );
 	$title = isset( $labels[ $role ] ) ? $labels[ $role ] : 'EventNest Dashboard';
-	$out = '<section class="en-dashboard-page"><header class="en-dashboard-heading"><p class="eyebrow eyebrow--small">EVENTNEST WORKSPACE</p><h1>' . esc_html( $title ) . '</h1><p>Welcome, ' . esc_html( $user->display_name ) . '.</p></header>';
+	$dashboard_class = 'en-dashboard-page' . ( 'administrator' === $role ? ' en-dashboard-page--admin' : '' );
+	$out = '<section class="' . esc_attr( $dashboard_class ) . '"><header class="en-dashboard-heading"><p class="eyebrow eyebrow--small">EVENTNEST WORKSPACE</p><h1>' . esc_html( $title ) . '</h1><p>Welcome, ' . esc_html( $user->display_name ) . '.</p></header>';
 	$out .= enc_dashboard_action_links( array( array( 'Edit profile', home_url( '/my-profile/' ) ) ) );
 	if ( 'pending' === get_user_meta( $user->ID, '_en_account_status', true ) ) $out .= '<p class="en-auth__notice en-auth__notice--error">Your faculty access is pending administrator approval.</p>';
 	if ( in_array( $role, array( 'en_student', 'en_faculty' ), true ) ) {
