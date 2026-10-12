@@ -1,7 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'EN_VERSION', '1.2.20' );
+define( 'EN_VERSION', '1.2.34' );
 
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/demo-events.php';
@@ -33,6 +33,16 @@ add_action( 'wp_enqueue_scripts', function () {
 	wp_enqueue_style( 'eventnest-fonts', 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap', array(), null );
 	wp_enqueue_style( 'eventnest', get_template_directory_uri() . '/assets/css/main.css', array( 'eventnest-fonts' ), EN_VERSION );
 	wp_enqueue_script( 'eventnest', get_template_directory_uri() . '/assets/js/main.js', array(), EN_VERSION, true );
+} );
+
+// Use the illustrated page masthead only on the four requested content areas.
+add_filter( 'body_class', function ( $classes ) {
+	$editorial_pages = array( 'about', 'about-us', 'contact', 'contact-us', 'proposals', 'my-proposals', 'review-proposals', 'submit-proposal', 'student-stories', 'competitions' );
+	$editorial_archives = is_post_type_archive( array( 'student_story', 'event', 'club' ) ) || is_tax( array( 'event_city', 'event_category' ) );
+	if ( is_page( $editorial_pages ) || $editorial_archives ) {
+		$classes[] = 'en-editorial-banner-page';
+	}
+	return $classes;
 } );
 
 // Apply saved theme (light/dark) before paint to avoid a flash.

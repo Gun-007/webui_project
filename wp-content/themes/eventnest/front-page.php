@@ -66,14 +66,20 @@ $archive    = get_post_type_archive_link( 'event' );
 ?>
 
 <section class="hero" <?php if ( $hero_image ) : ?>style="--hero-image:url('<?php echo esc_url( $hero_image ); ?>')"<?php endif; ?>>
+	<video class="hero__video" autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1">
+		<source src="<?php echo esc_url( get_template_directory_uri() . '/assets/videos/eventnest-home.mp4' ); ?>" type="video/mp4">
+	</video>
+	<div class="hero__video-overlay" aria-hidden="true"></div>
 	<div class="wrap hero__inner">
+		<div class="hero__copy">
 		<p class="eyebrow"><span class="eyebrow__dot"></span><?php esc_html_e( 'Your campus. Your events. Your platform.', 'eventnest' ); ?></p>
 		<h1 class="hero__title">
 			<span><?php esc_html_e( 'Discover.', 'eventnest' ); ?></span>
 			<span><?php esc_html_e( 'Participate.', 'eventnest' ); ?></span>
-			<span><?php esc_html_e( 'Create.', 'eventnest' ); ?> <em><?php esc_html_e( 'Together.', 'eventnest' ); ?></em></span>
+			<span><?php esc_html_e( 'Create.', 'eventnest' ); ?></span>
+			<span><em><?php esc_html_e( 'Together.', 'eventnest' ); ?></em></span>
 		</h1>
-		<p class="hero__sub"><?php echo esc_html( en_opt( 'hero_sub' ) ); ?></p>
+		</div>
 		<a class="btn btn--brand" href="<?php echo esc_url( $archive ); ?>">
 			<?php esc_html_e( 'Explore events', 'eventnest' ); ?>
 			<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
